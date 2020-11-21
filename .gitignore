@@ -7,15 +7,18 @@ bin/*
 .pydevproject
 .settings/*
 .vscode/*
+*.o
+*.o.d
 *~
 tools/make/config.mk
 cflie.*
 version.c
 tags
 
-/cf2.*
+./cf2.*
 /tag.*
 *.gch
+
 
 current_platform.mk
 
@@ -24,3 +27,9 @@ current_platform.mk
 
 /docs/.jekyll-metadata
 docs/.jekyll-cache
+
+cf2.bin
+cf2.dfu
+cf2.elf
+cf2.hex
+cf2.map

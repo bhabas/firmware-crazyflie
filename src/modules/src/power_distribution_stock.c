@@ -83,10 +83,10 @@ void powerStop()
 
 void powerDistribution(const control_t *control)
 {
-  #ifdef QUAD_FORMATION_X
-    int16_t r = control->roll / 2.0f;
+  #ifdef QUAD_FORMATION_X // Not sure where this is defined
+    int16_t r = control->roll / 2.0f; // Divide roll thrust between each motor
     int16_t p = control->pitch / 2.0f;
-    motorPower.m1 = limitThrust(control->thrust - r + p + control->yaw);
+    motorPower.m1 = limitThrust(control->thrust - r + p + control->yaw); // Add respective thrust components
     motorPower.m2 = limitThrust(control->thrust - r - p - control->yaw);
     motorPower.m3 =  limitThrust(control->thrust + r - p + control->yaw);
     motorPower.m4 =  limitThrust(control->thrust + r + p - control->yaw);
@@ -102,14 +102,14 @@ void powerDistribution(const control_t *control)
   #endif
 
   if (motorSetEnable)
-  {
+  { // This maps thrust to voltage, compensates for battery voltage, then converts to PWM  
     motorsSetRatio(MOTOR_M1, motorPowerSet.m1);
     motorsSetRatio(MOTOR_M2, motorPowerSet.m2);
     motorsSetRatio(MOTOR_M3, motorPowerSet.m3);
     motorsSetRatio(MOTOR_M4, motorPowerSet.m4);
   }
   else
-  {
+  { // Cap motor force low end to idleThrust
     if (motorPower.m1 < idleThrust) {
       motorPower.m1 = idleThrust;
     }

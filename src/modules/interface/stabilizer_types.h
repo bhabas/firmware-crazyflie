@@ -172,7 +172,7 @@ typedef enum mode_e {
   modeVelocity
 } stab_mode_t;
 
-typedef struct setpoint_s {
+typedef struct setpoint_s { // These structs are shared across controllers and estimators
   uint32_t timestamp;
 
   attitude_t attitude;      // deg
@@ -183,6 +183,13 @@ typedef struct setpoint_s {
   velocity_t velocity;      // m/s
   acc_t acceleration;       // m/s^2
   bool velocity_body;       // true if velocity is given in body frame; false if velocity is given in world frame
+
+  // DEFINE COMMAND VALUES RECEIVED FROM CRAZYSWARM
+  uint8_t cmd_type; 
+  float cmd_val1;
+  float cmd_val2;
+  float cmd_val3;
+  float cmd_flag;
 
   struct {
     stab_mode_t x;

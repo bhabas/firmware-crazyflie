@@ -351,9 +351,9 @@ static bool handleMemTesterWrite(const uint32_t memAddr, const uint8_t writeLen,
   return true;
 }
 
-PARAM_GROUP_START(memTst)
-  PARAM_ADD(PARAM_UINT8, resetW, &memTesterWriteReset)
-PARAM_GROUP_STOP(memTst)
+// PARAM_GROUP_START(memTst)
+//   PARAM_ADD(PARAM_UINT8, resetW, &memTesterWriteReset)
+// PARAM_GROUP_STOP(memTst)
 
 LOG_GROUP_START(memTst)
   LOG_ADD(LOG_UINT32, errCntW, &memTesterWriteErrorCount)

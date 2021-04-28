@@ -1254,6 +1254,6 @@ void __attribute__((used)) BMI088_SPI_RX_DMA_IRQHandler(void)
   }
 }
 
-PARAM_GROUP_START(imu_sensors)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, BMP388, &isBarometerPresent)
-PARAM_GROUP_STOP(imu_sensors)
+// PARAM_GROUP_START(imu_sensors)
+// PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, BMP388, &isBarometerPresent)
+// PARAM_GROUP_STOP(imu_sensors)

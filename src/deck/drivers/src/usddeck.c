@@ -831,9 +831,9 @@ PARAM_GROUP_START(deck)
 PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcUSD, &isInit)
 PARAM_GROUP_STOP(deck)
 
-PARAM_GROUP_START(usd)
-PARAM_ADD(PARAM_UINT8, logging, &enableLogging) /* use to start/stop logging*/
-PARAM_GROUP_STOP(usd)
+// PARAM_GROUP_START(usd)
+// PARAM_ADD(PARAM_UINT8, logging, &enableLogging) /* use to start/stop logging*/
+// PARAM_GROUP_STOP(usd)
 
 LOG_GROUP_START(usd)
 STATS_CNT_RATE_LOG_ADD(spiWrBps, &spiWriteRate)

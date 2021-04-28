@@ -271,19 +271,19 @@ void positionControllerINDI(const sensorData_t *sensors,
 }
 
 
-PARAM_GROUP_START(posCtrlIndi)
+// PARAM_GROUP_START(posCtrlIndi)
 
-// Position controller gain
-PARAM_ADD(PARAM_FLOAT, K_xi_x, &K_xi_x)
-PARAM_ADD(PARAM_FLOAT, K_xi_y, &K_xi_y)
-PARAM_ADD(PARAM_FLOAT, K_xi_z, &K_xi_z)
+// // Position controller gain
+// PARAM_ADD(PARAM_FLOAT, K_xi_x, &K_xi_x)
+// PARAM_ADD(PARAM_FLOAT, K_xi_y, &K_xi_y)
+// PARAM_ADD(PARAM_FLOAT, K_xi_z, &K_xi_z)
 
-// Velocity Controller gain
-PARAM_ADD(PARAM_FLOAT, K_dxi_x, &K_dxi_x)
-PARAM_ADD(PARAM_FLOAT, K_dxi_y, &K_dxi_y)
-PARAM_ADD(PARAM_FLOAT, K_dxi_z, &K_dxi_z)
+// // Velocity Controller gain
+// PARAM_ADD(PARAM_FLOAT, K_dxi_x, &K_dxi_x)
+// PARAM_ADD(PARAM_FLOAT, K_dxi_y, &K_dxi_y)
+// PARAM_ADD(PARAM_FLOAT, K_dxi_z, &K_dxi_z)
 
-PARAM_GROUP_STOP(posCtrlIndi)
+// PARAM_GROUP_STOP(posCtrlIndi)
 
 
 

@@ -138,7 +138,7 @@ static const DeckDriver bigquadtest_deck = {
 
 DECK_DRIVER(bigquadtest_deck);
 
-PARAM_GROUP_START(BigQuadTest)
-PARAM_ADD(PARAM_UINT8, pass, &testsPass)
-PARAM_GROUP_STOP(BigQuadTest)
+// PARAM_GROUP_START(BigQuadTest)
+// PARAM_ADD(PARAM_UINT8, pass, &testsPass)
+// PARAM_GROUP_STOP(BigQuadTest)
 

@@ -118,6 +118,6 @@ static void timerHandler(xTimerHandle timer) {
 }
 
 
-PARAM_GROUP_START(system)
-PARAM_ADD(PARAM_UINT8, taskDump, &triggerDump)
-PARAM_GROUP_STOP(system)
+// PARAM_GROUP_START(system)
+// PARAM_ADD(PARAM_UINT8, taskDump, &triggerDump)
+// PARAM_GROUP_STOP(system)

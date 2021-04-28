@@ -942,9 +942,9 @@ void sensorsBoschSetAccMode(accModes accMode)
   }
 }
 
-PARAM_GROUP_START(imu_sensors)
-PARAM_ADD(PARAM_UINT8, BoschGyrSel, &gyroPrimInUse)
-PARAM_ADD(PARAM_UINT8, BoschAccSel, &accelPrimInUse)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, BMM150, &isMagnetometerPresent)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, BMP285, &isBarometerPresent)
-PARAM_GROUP_STOP(imu_sensors)
+// PARAM_GROUP_START(imu_sensors)
+// PARAM_ADD(PARAM_UINT8, BoschGyrSel, &gyroPrimInUse)
+// PARAM_ADD(PARAM_UINT8, BoschAccSel, &accelPrimInUse)
+// PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, BMM150, &isMagnetometerPresent)
+// PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, BMP285, &isBarometerPresent)
+// PARAM_GROUP_STOP(imu_sensors)

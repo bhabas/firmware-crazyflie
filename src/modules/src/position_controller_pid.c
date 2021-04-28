@@ -265,41 +265,41 @@ LOG_ADD(LOG_FLOAT, VZd, &this.pidVZ.pid.outD)
 
 LOG_GROUP_STOP(posCtl)
 
-PARAM_GROUP_START(velCtlPid)
+// PARAM_GROUP_START(velCtlPid)
 
-PARAM_ADD(PARAM_FLOAT, vxKp, &this.pidVX.pid.kp)
-PARAM_ADD(PARAM_FLOAT, vxKi, &this.pidVX.pid.ki)
-PARAM_ADD(PARAM_FLOAT, vxKd, &this.pidVX.pid.kd)
+// PARAM_ADD(PARAM_FLOAT, vxKp, &this.pidVX.pid.kp)
+// PARAM_ADD(PARAM_FLOAT, vxKi, &this.pidVX.pid.ki)
+// PARAM_ADD(PARAM_FLOAT, vxKd, &this.pidVX.pid.kd)
 
-PARAM_ADD(PARAM_FLOAT, vyKp, &this.pidVY.pid.kp)
-PARAM_ADD(PARAM_FLOAT, vyKi, &this.pidVY.pid.ki)
-PARAM_ADD(PARAM_FLOAT, vyKd, &this.pidVY.pid.kd)
+// PARAM_ADD(PARAM_FLOAT, vyKp, &this.pidVY.pid.kp)
+// PARAM_ADD(PARAM_FLOAT, vyKi, &this.pidVY.pid.ki)
+// PARAM_ADD(PARAM_FLOAT, vyKd, &this.pidVY.pid.kd)
 
-PARAM_ADD(PARAM_FLOAT, vzKp, &this.pidVZ.pid.kp)
-PARAM_ADD(PARAM_FLOAT, vzKi, &this.pidVZ.pid.ki)
-PARAM_ADD(PARAM_FLOAT, vzKd, &this.pidVZ.pid.kd)
+// PARAM_ADD(PARAM_FLOAT, vzKp, &this.pidVZ.pid.kp)
+// PARAM_ADD(PARAM_FLOAT, vzKi, &this.pidVZ.pid.ki)
+// PARAM_ADD(PARAM_FLOAT, vzKd, &this.pidVZ.pid.kd)
 
-PARAM_GROUP_STOP(velCtlPid)
+// PARAM_GROUP_STOP(velCtlPid)
 
-PARAM_GROUP_START(posCtlPid)
+// PARAM_GROUP_START(posCtlPid)
 
-PARAM_ADD(PARAM_FLOAT, xKp, &this.pidX.pid.kp)
-PARAM_ADD(PARAM_FLOAT, xKi, &this.pidX.pid.ki)
-PARAM_ADD(PARAM_FLOAT, xKd, &this.pidX.pid.kd)
+// PARAM_ADD(PARAM_FLOAT, xKp, &this.pidX.pid.kp)
+// PARAM_ADD(PARAM_FLOAT, xKi, &this.pidX.pid.ki)
+// PARAM_ADD(PARAM_FLOAT, xKd, &this.pidX.pid.kd)
 
-PARAM_ADD(PARAM_FLOAT, yKp, &this.pidY.pid.kp)
-PARAM_ADD(PARAM_FLOAT, yKi, &this.pidY.pid.ki)
-PARAM_ADD(PARAM_FLOAT, yKd, &this.pidY.pid.kd)
+// PARAM_ADD(PARAM_FLOAT, yKp, &this.pidY.pid.kp)
+// PARAM_ADD(PARAM_FLOAT, yKi, &this.pidY.pid.ki)
+// PARAM_ADD(PARAM_FLOAT, yKd, &this.pidY.pid.kd)
 
-PARAM_ADD(PARAM_FLOAT, zKp, &this.pidZ.pid.kp)
-PARAM_ADD(PARAM_FLOAT, zKi, &this.pidZ.pid.ki)
-PARAM_ADD(PARAM_FLOAT, zKd, &this.pidZ.pid.kd)
+// PARAM_ADD(PARAM_FLOAT, zKp, &this.pidZ.pid.kp)
+// PARAM_ADD(PARAM_FLOAT, zKi, &this.pidZ.pid.ki)
+// PARAM_ADD(PARAM_FLOAT, zKd, &this.pidZ.pid.kd)
 
-PARAM_ADD(PARAM_UINT16, thrustBase, &this.thrustBase)
-PARAM_ADD(PARAM_UINT16, thrustMin, &this.thrustMin)
+// PARAM_ADD(PARAM_UINT16, thrustBase, &this.thrustBase)
+// PARAM_ADD(PARAM_UINT16, thrustMin, &this.thrustMin)
 
-PARAM_ADD(PARAM_FLOAT, rpLimit,  &rpLimit)
-PARAM_ADD(PARAM_FLOAT, xyVelMax, &xyVelMax)
-PARAM_ADD(PARAM_FLOAT, zVelMax,  &zVelMax)
+// PARAM_ADD(PARAM_FLOAT, rpLimit,  &rpLimit)
+// PARAM_ADD(PARAM_FLOAT, xyVelMax, &xyVelMax)
+// PARAM_ADD(PARAM_FLOAT, zVelMax,  &zVelMax)
 
-PARAM_GROUP_STOP(posCtlPid)
+// PARAM_GROUP_STOP(posCtlPid)

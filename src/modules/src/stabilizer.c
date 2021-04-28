@@ -104,6 +104,9 @@ static struct {
   int16_t rateRoll;
   int16_t ratePitch;
   int16_t rateYaw;
+
+  // compressed xy position - mm
+  uint32_t xy;
 } stateCompressed;
 
 static struct {
@@ -143,6 +146,30 @@ static void calcSensorToOutputLatency(const sensorData_t *sensorData)
   inToOutLatency = outTimestamp - sensorData->interruptTimestamp;
 }
 
+static inline uint32_t compressXY(float x, float y)
+{
+  
+  uint16_t xnew, ynew;
+  uint32_t xy;
+
+  // CONVERT FLOATS TO INTS OFFSET BY UINT16_MAX/2.0
+  xnew = x*1000.0f + 32767.0f;
+  ynew = y*1000.0f + 32767.0f;
+
+
+  // CLIP RANGES OF VALUES
+  xnew = (xnew < UINT16_MAX) ? xnew : UINT16_MAX;
+  xnew = (xnew > 0) ? xnew : 0;
+
+  ynew = (ynew < UINT16_MAX) ? ynew : UINT16_MAX;
+  ynew = (ynew > 0) ? ynew : 0;
+
+  // APPEND YNEW BYTES TO XNEW BYTES
+  xy = (xnew << 16 | ynew); // Shift xnew by 16 and combine
+
+  return xy;
+}
+
 static void compressState()
 {
   stateCompressed.x = state.position.x * 1000.0f;
@@ -168,6 +195,9 @@ static void compressState()
   stateCompressed.rateRoll = sensorData.gyro.x * deg2millirad;
   stateCompressed.ratePitch = -sensorData.gyro.y * deg2millirad;
   stateCompressed.rateYaw = sensorData.gyro.z * deg2millirad;
+
+  stateCompressed.xy = compressXY(state.position.x,state.position.y);
+  // DEBUG_PRINT("%lu \n",stateCompressed.xy);
 }
 
 static void compressSetpoint()
@@ -695,4 +725,6 @@ LOG_ADD(LOG_UINT32, quat, &stateCompressed.quat)           // compressed quatern
 LOG_ADD(LOG_INT16, rateRoll, &stateCompressed.rateRoll)   // angular velocity - milliradians / sec
 LOG_ADD(LOG_INT16, ratePitch, &stateCompressed.ratePitch)
 LOG_ADD(LOG_INT16, rateYaw, &stateCompressed.rateYaw)
+
+LOG_ADD(LOG_UINT32, xy, &stateCompressed.xy)
 LOG_GROUP_STOP(stateEstimateZ)

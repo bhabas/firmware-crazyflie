@@ -357,7 +357,7 @@ static inline struct mat33 mrows(struct vec a, struct vec b, struct vec c) {
 	return m;
 }
 // construct the matrix A from vector v such that Ax = cross(v, x)
-static inline struct mat33 mcrossmat(struct vec v) {
+static inline struct mat33 hat(struct vec v) {
 	struct mat33 m;
 	m.m[0][0] = 0;
 	m.m[0][1] = -v.z;
@@ -501,7 +501,7 @@ static inline struct mat33 madd3(struct mat33 a, struct mat33 b, struct mat33 c)
 // assumes input axis is normalized, angle in radians.
 static inline struct mat33 maxisangle(struct vec axis, float angle) {
 	// Rodrigues formula
-	struct mat33 const K = mcrossmat(axis);
+	struct mat33 const K = hat(axis);
 	return madd3(
 		meye(),
 		mscl(sinf(angle), K),
@@ -978,6 +978,35 @@ static inline struct vec vprojectpolytope(struct vec v, float const A[], float c
 		}
 	}
 	return x;
+}
+
+// construct the vector v from matrix A such that Ax = cross(v, x)
+static inline struct vec dehat(struct mat33 m) {
+	struct vec v;
+
+	v.x = m.m[2][1];
+	v.y = m.m[0][2];
+	v.z = m.m[1][0];
+	
+	return v;
+}
+
+
+static inline void printvec(struct vec v){
+	printf("%f, %f, %f\n", (double)v.x, (double)v.y, (double)v.z);
+	return;
+}
+
+static inline void printmat(struct mat33 m){
+    struct vec vrow_0 = mrow(m,0);
+    struct vec vrow_1 = mrow(m,1);
+    struct vec vrow_2 = mrow(m,2);
+
+    printvec(vrow_0);
+    printvec(vrow_1);
+    printvec(vrow_2);
+
+	return;
 }
 
 

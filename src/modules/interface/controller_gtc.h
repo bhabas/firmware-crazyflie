@@ -11,6 +11,7 @@
 
 void controllerGTCInit(void);
 bool controllerGTCTest(void);
+void controllerGTCReset(void);
 void controllerGTC(control_t *control, setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,

@@ -286,6 +286,7 @@ static void stabilizerTask(void* param)
 
   DEBUG_PRINT("Ready to fly.\n");
 
+  // ================ MAIN SYSTEM LOOP - TOP ================ //
   while(1) {
     // The sensor should unlock at 1kHz
     sensorsWaitDataReady();
@@ -299,13 +300,14 @@ static void stabilizerTask(void* param)
     if (testState != testDone) {
       sensorsAcquire(&sensorData, tick);
       testProps(&sensorData);
-    } else {
-      // allow to update estimator dynamically
+    } 
+    else {
+      // Allow to update estimator dynamically
       if (getStateEstimator() != estimatorType) {
         stateEstimatorSwitchTo(estimatorType);
         estimatorType = getStateEstimator();
       }
-      // allow to update controller dynamically
+      // Allow to update controller dynamically
       if (getControllerType() != controllerType) {
         controllerInit(controllerType);
         controllerType = getControllerType();
@@ -317,7 +319,7 @@ static void stabilizerTask(void* param)
       commanderGetSetpoint(&setpoint, &state);
       compressSetpoint();
 
-      sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
+      sitAwUpdateSetpoint(&setpoint, &sensorData, &state); // Situation Awareness (Tumble,Freefall,At Rest)
       collisionAvoidanceUpdateSetpoint(&setpoint, &sensorData, &state, tick);
 
       controller(&control, &setpoint, &sensorData, &state, tick);
@@ -327,7 +329,8 @@ static void stabilizerTask(void* param)
       checkStops = systemIsArmed();
       if (emergencyStop || (systemIsArmed() == false)) {
         powerStop();
-      } else {
+      } 
+      else {
         powerDistribution(&control);
       }
 
@@ -349,6 +352,7 @@ static void stabilizerTask(void* param)
       }
     }
   }
+  // ================ MAIN SYSTEM LOOP - BOTTOM ================ //
 }
 
 void stabilizerSetEmergencyStop()

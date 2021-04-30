@@ -648,7 +648,7 @@ static inline struct quat mat2quat(struct mat33 m) {
 //
 
 // convert quaternion to (roll, pitch, yaw) Euler angles using Tait-Bryan convention
-// (yaw, then pitch about new pitch axis, then roll about new roll axis)
+// (yaw, then pitch about new pitch axis, then roll about new roll axis) [ZYX]
 static inline struct vec quat2rpy(struct quat q) {
 	// from https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
 	struct vec v;
@@ -991,9 +991,36 @@ static inline struct vec dehat(struct mat33 m) {
 	return v;
 }
 
+// Convert quaternion to (roll, pitch, yaw) Euler angles using Tait-Bryan convention [YZX]
+//  - Pitch, then yaw about new pitch axis, then roll about new roll axis
+//  - Notation allows greater than 90 deg pitch and roll angles
+static inline struct vec quat2eul(struct quat q) {
+	// from https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+
+	struct vec eul;
+	float R11,R21,R31,R22,R23;
+
+
+	// CALC NEEDED ROTATION MATRIX COMPONENTS FROM QUATERNION
+    R11 = 1.0f - 2.0f*( fsqr(q.y) + fsqr(q.z) );
+    R21 = 2.0f*(q.x*q.y + q.z*q.w);
+    R31 = 2.0f*(q.x*q.z - q.y*q.w);
+
+    R22 = 1.0f - 2.0f*( fsqr(q.x) + fsqr(q.z) );
+    R23 = 2.0f*(q.y*q.z - q.x*q.w);
+
+
+	// CONVERT ROTATION MATRIX COMPONENTS TO EULER ANGLES (YZX NOTATION)
+	eul.x = atan2f(-R23,R22); 	// Roll
+	eul.y = atan2f(-R31,R11); 	// Pitch
+	eul.z = asinf(R21); 		// Yaw
+
+	return eul;
+}
+
 
 static inline void printvec(struct vec v){
-	printf("%f, %f, %f\n", (double)v.x, (double)v.y, (double)v.z);
+	DEBUG_PRINT("%.4f, %.4f, %.4f\n", (double)v.x, (double)v.y, (double)v.z);
 	return;
 }
 
@@ -1005,6 +1032,7 @@ static inline void printmat(struct mat33 m){
     printvec(vrow_0);
     printvec(vrow_1);
     printvec(vrow_2);
+	DEBUG_PRINT("\n");
 
 	return;
 }

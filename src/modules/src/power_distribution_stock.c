@@ -71,7 +71,7 @@ bool powerDistributionTest(void)
   return pass;
 }
 
-#define limitThrust(VAL) limitUint16(VAL)
+#define limitThrust(VAL) limitUint16(VAL) // Limit PWM value to UINT16_MAX = 65,535
 
 void powerStop()
 {
@@ -83,23 +83,14 @@ void powerStop()
 
 void powerDistribution(const control_t *control)
 {
-  #ifdef QUAD_FORMATION_X // Not sure where this is defined
-    int16_t r = control->roll / 2.0f; // Divide roll thrust between each motor
-    int16_t p = control->pitch / 2.0f;
-    motorPower.m1 = limitThrust(control->thrust - r + p + control->yaw); // Add respective thrust components
-    motorPower.m2 = limitThrust(control->thrust - r - p - control->yaw);
-    motorPower.m3 =  limitThrust(control->thrust + r - p + control->yaw);
-    motorPower.m4 =  limitThrust(control->thrust + r + p - control->yaw);
-  #else // QUAD_FORMATION_NORMAL
-    motorPower.m1 = limitThrust(control->thrust + control->pitch +
-                               control->yaw);
-    motorPower.m2 = limitThrust(control->thrust - control->roll -
-                               control->yaw);
-    motorPower.m3 =  limitThrust(control->thrust - control->pitch +
-                               control->yaw);
-    motorPower.m4 =  limitThrust(control->thrust + control->roll -
-                               control->yaw);
-  #endif
+  // Default 'X' Configuration
+  int16_t r = control->roll / 2.0f; // Divide roll thrust between each motor
+  int16_t p = control->pitch / 2.0f;
+  motorPower.m1 = limitThrust(control->thrust - r + p + control->yaw); // Add respective thrust components
+  motorPower.m2 = limitThrust(control->thrust - r - p - control->yaw);
+  motorPower.m3 =  limitThrust(control->thrust + r - p + control->yaw);
+  motorPower.m4 =  limitThrust(control->thrust + r + p - control->yaw);
+  
 
   if (motorSetEnable)
   { // This maps thrust to voltage, compensates for battery voltage, then converts to PWM  

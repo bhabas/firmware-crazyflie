@@ -458,7 +458,7 @@ static float predictedNX;
 static float predictedNY;
 static float measuredNX;
 static float measuredNY;
-
+// OPTICAL FLOW GETS INTRODUCED INTO KALMAN FILTER HERE
 void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *flow, const Axis3f *gyro)
 {
   // Inclusion of flow measurements in the EKF done by two scalar updates

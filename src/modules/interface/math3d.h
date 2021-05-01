@@ -28,6 +28,7 @@ SOFTWARE.
 #include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <debug.h>
 
 #ifdef CMATH3D_ASSERTS
 #include <assert.h>

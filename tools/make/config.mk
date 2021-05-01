@@ -8,7 +8,7 @@ CLOAD_CMDS = -w radio://0/80/2M/E7E7E7E701
 
 
 # ESTIMATOR=kalman # sets the default estimator at runtime (complementary,kalman)
-CONTROLLER=Mellinger # Sets the default controller at runtime (Mellinger,PID,GTC)
+CONTROLLER=GTC # Sets the default controller (Mellinger,PID,GTC) at runtime and can't be overwritten 
 
 
 ## Weight of the Crazyflie, including decks. The default setting is a Crazyflie 2.X without decks.

@@ -98,13 +98,18 @@ static int32_t f_yaw_pwm;
 
 
 // CONTROLLER GAINS
-static float kp_x = 0.7f;   // Pos. Proportional Gain
-static float kd_x = 0.25f;  // Pos. Derivative Gain
+static float kp_xc = 0.7f;  // Pos. Proportional Gain
+static float kd_xc = 0.25f; // Pos. Derivative Gain
 static float ki_x = 0.0f;   // Pos. Integral Gain
 
-static float kp_R = 0.004f;  // Rot. Proportional Gain
-static float kd_R = 0.0008f;  // Rot. Derivative Gain
-static float ki_R = 0.0f;   // Rot. Integral Gain
+static float kp_Rc = 0.004f;    // Rot. Proportional Gain
+static float kd_Rc = 0.0008f;   // Rot. Derivative Gain
+static float ki_R = 0.0f;       // Rot. Integral Gain
+
+static struct vec kp_x = {0.0f,0.0f,0.0f};  // Pos. Proportional Gain
+static struct vec kd_x = {0.0f,0.0f,0.0f};  // Pos. Derivative Gain
+static struct vec kp_R = {0.0f,0.0f,0.0f};  // Rot. Proportional Gain
+static struct vec kd_R = {0.0f,0.0f,0.0f};  // Rot. Derivative Gain
 
 static bool attCtrlEnable = true;
 
@@ -131,133 +136,140 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
                                          const state_t *state,
                                          const uint32_t tick)
 {
-    // SYSTEM PARAMETERS 
-    J = mdiag(1.65717e-5f, 1.66556e-5f, 2.92617e-5f); // Rotational Inertia of CF [kg m^2]
+    if (RATE_DO_EXECUTE(RATE_500_HZ, tick)) {
+        // SYSTEM PARAMETERS 
+        J = mdiag(1.65717e-5f, 1.66556e-5f, 2.92617e-5f); // Rotational Inertia of CF [kg m^2]
 
-    // =========== State Definitions =========== //
-    statePos = mkvec(state->position.x*0, state->position.y*0, state->position.z);                      // [m]
-    stateVel = mkvec(state->velocity.x*0, state->velocity.y*0, state->velocity.z);                      // [m]
-    stateOmega = mkvec(radians(sensors->gyro.x), radians(sensors->gyro.y), radians(sensors->gyro.z));   // [rad/s]
-    stateQuat = mkquat(state->attitudeQuaternion.x,
-                       state->attitudeQuaternion.y,
-                       state->attitudeQuaternion.z,
-                       state->attitudeQuaternion.w);
-    
-    // EULER ANGLES EXPRESSED IN YZX NOTATION
-    stateEul = quat2eul(stateQuat);
-    stateEul.x = degrees(stateEul.x);
-    stateEul.y = degrees(stateEul.y);
-    stateEul.z = degrees(stateEul.z);
+        // CONTROL PARAMETERS
+        kp_x = vrepeat(kp_xc);
+        kd_x = vrepeat(kd_xc);
+        kp_R = vrepeat(kp_Rc); kp_R.z = 0.0f;
+        kd_R = vrepeat(kd_Rc); kd_R.z = 0.0f;
 
-    // =========== State Setpoints =========== //
-    x_d = mkvec(setpoint->position.x*0, setpoint->position.y*0, setpoint->position.z);             // Pos-desired [m]
-    v_d = mkvec(setpoint->velocity.x*0, setpoint->velocity.y*0, setpoint->velocity.z);             // Vel-desired [m/s]
-    a_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z); // Acc-desired [m/s^2]
+        // =========== State Definitions =========== //
+        statePos = mkvec(state->position.x*0, state->position.y*0, state->position.z);                      // [m]
+        stateVel = mkvec(state->velocity.x*0, state->velocity.y*0, state->velocity.z);                      // [m]
+        stateOmega = mkvec(radians(sensors->gyro.x), radians(sensors->gyro.y), radians(sensors->gyro.z));   // [rad/s]
+        stateQuat = mkquat(state->attitudeQuaternion.x,
+                        state->attitudeQuaternion.y,
+                        state->attitudeQuaternion.z,
+                        state->attitudeQuaternion.w);
+        
+        // EULER ANGLES EXPRESSED IN YZX NOTATION
+        stateEul = quat2eul(stateQuat);
+        stateEul.x = degrees(stateEul.x);
+        stateEul.y = degrees(stateEul.y);
+        stateEul.z = degrees(stateEul.z);
 
-    omega_d = mkvec(radians(setpoint->attitudeRate.roll),
-                    radians(setpoint->attitudeRate.pitch),
-                    radians(setpoint->attitudeRate.yaw));         // Omega-desired [rad/s]
-    domega_d = mkvec(radians(0.0f), radians(0.0f), radians(0.0f));  // Omega-Accl. [rad/s^2]
+        // =========== State Setpoints =========== //
+        x_d = mkvec(setpoint->position.x*0, setpoint->position.y*0, setpoint->position.z);             // Pos-desired [m]
+        v_d = mkvec(setpoint->velocity.x*0, setpoint->velocity.y*0, setpoint->velocity.z);             // Vel-desired [m/s]
+        a_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z); // Acc-desired [m/s^2]
 
-    eul_d = mkvec(radians(setpoint->attitude.roll),
-                    -radians(setpoint->attitude.pitch), 
-                    radians(setpoint->attitude.yaw));
-    quat_d = rpy2quat(eul_d); // Desired orientation from eul angles [ZYX NOTATION]
+        omega_d = mkvec(radians(setpoint->attitudeRate.roll),
+                        radians(setpoint->attitudeRate.pitch),
+                        radians(setpoint->attitudeRate.yaw));         // Omega-desired [rad/s]
+        domega_d = mkvec(radians(0.0f), radians(0.0f), radians(0.0f));  // Omega-Accl. [rad/s^2]
 
-
-
-
-
-    // =========== Rotation Matrix =========== //
-    // R changes Body axes to be in terms of Global axes
-    // https://www.andre-gaschler.com/rotationconverter/
-    R = quat2rotmat(stateQuat); // Quaternion to Rotation Matrix Conversion
-    b3 = mvmul(R, e_3);         // Current body vertical axis in terms of global axes | [b3 = R*e_3] 
+        eul_d = mkvec(radians(setpoint->attitude.roll),
+                        -radians(setpoint->attitude.pitch), 
+                        radians(setpoint->attitude.yaw));
+        quat_d = rpy2quat(eul_d); // Desired orientation from eul angles [ZYX NOTATION]
 
 
 
-    // =========== Translational Errors & Desired Body-Fixed Axes =========== //
-    e_x = vsub(statePos, x_d); // [e_x = pos-x_d]
-    e_v = vsub(stateVel, v_d); // [e_v = vel-v_d]
-
-    /* [F_thrust_ideal = -kp_x*e_x + -kd_x*e_v + m*g*e_3 + m*a_d] */
-    temp1_v = vscl(-kp_x, e_x);
-    temp2_v = vscl(-kd_x, e_v);
-    temp3_v = vscl(m*g, e_3);
-    temp4_v = vscl(m, a_d);
-    F_thrust_ideal = vadd4(temp1_v, temp2_v, temp3_v, temp4_v); 
 
 
-    // =========== Rotational Errors =========== // 
-    b3_d = vnormalize(F_thrust_ideal);
-    b2_d = vnormalize(vcross(b3_d, b1_d)); // [b3_d x b1_d] | body-fixed horizontal axis
-    temp1_v = vnormalize(vcross(b2_d, b3_d));
-    R_d = mcolumns(temp1_v, b2_d, b3_d); // Desired rotation matrix from calculations
+        // =========== Rotation Matrix =========== //
+        // R changes Body axes to be in terms of Global axes
+        // https://www.andre-gaschler.com/rotationconverter/
+        R = quat2rotmat(stateQuat); // Quaternion to Rotation Matrix Conversion
+        b3 = mvmul(R, e_3);         // Current body vertical axis in terms of global axes | [b3 = R*e_3] 
 
-    // ATTITUDE CONTROL
-    if (attCtrlEnable){ 
-        R_d = quat2rotmat(quat_d); // Desired rotation matrix from att. control
+
+
+        // =========== Translational Errors & Desired Body-Fixed Axes =========== //
+        e_x = vsub(statePos, x_d); // [e_x = pos-x_d]
+        e_v = vsub(stateVel, v_d); // [e_v = vel-v_d]
+
+        /* [F_thrust_ideal = -kp_x*e_x + -kd_x*e_v + m*g*e_3 + m*a_d] */
+        temp1_v = veltmul(vneg(kp_x), e_x);
+        temp2_v = veltmul(vneg(kd_x), e_v);
+        temp3_v = vscl(m*g, e_3);
+        temp4_v = vscl(m, a_d);
+        F_thrust_ideal = vadd4(temp1_v, temp2_v, temp3_v, temp4_v); 
+
+
+        // =========== Rotational Errors =========== // 
+        b3_d = vnormalize(F_thrust_ideal);
+        b2_d = vnormalize(vcross(b3_d, b1_d)); // [b3_d x b1_d] | body-fixed horizontal axis
+        temp1_v = vnormalize(vcross(b2_d, b3_d));
+        R_d = mcolumns(temp1_v, b2_d, b3_d); // Desired rotation matrix from calculations
+
+        // ATTITUDE CONTROL
+        if (attCtrlEnable){ 
+            R_d = quat2rotmat(quat_d); // Desired rotation matrix from att. control
+        }
+
+
+        RdT_R = mmul(mtranspose(R_d), R);    // [R_d'*R]
+        RT_Rd = mmul(mtranspose(R), R_d);    // [R'*R_d]
+
+        temp1_v = dehat(msub(RdT_R, RT_Rd)); // [dehat(R_d'*R - R'*R)]
+        e_R = vscl(0.5f, temp1_v);           // Rotation error | [eR = 0.5*dehat(R_d'*R - R'*R)]
+
+        temp1_v = mvmul(RT_Rd, omega_d);     // [R.transpose()*R_d*omega_d]
+        e_omega = vsub(stateOmega, temp1_v); // Ang. vel error | [e_omega = omega - R.transpose()*R_d*omega_d] 
+
+
+        // =========== Control Equations =========== // 
+        /* [M = -kp_R*e_R - kd_R*e_omega + Gyro_dyn] */
+
+        temp1_v = veltmul(vneg(kp_R), e_R);                         // [-kp_R*e_R]
+        temp2_v = veltmul(vneg(kd_R), e_omega);                     // [-kd_R*e_omega]
+        temp3_v = vcross(stateOmega, mvmul(J, stateOmega)); // [omega x J*omega]
+
+        /* [Gyro_dyn = omega.cross(J*omega) - J*(hat(omega)*R.transpose()*R_d*omega_d - R.transpose()*R_d*domega_d)] */
+        temp1_m = mmul(hat(stateOmega), RT_Rd);
+        temp4_v = mvmul(temp1_m, omega_d); // [hat(omega)*R.transpose()*R_d*omega_d]
+        temp5_v = mvmul(RT_Rd, domega_d);
+        temp4_v = mvmul(J, vsub(temp4_v, temp5_v));
+        temp4_v = vneg(temp4_v); // -J*(hat(omega)*R.transpose()*R_d*omega_d - R.transpose()*R_d*domega_d)
+
+
+        // =========== Thrust and Moments [Force Notation] =========== // 
+        F_thrust = vdot(F_thrust_ideal, b3);           // Project ideal thrust onto b3 vector [N]
+        M = vadd4(temp1_v, temp2_v, temp3_v, temp4_v); // Control moments [Nm]
+        
+
+        // =========== Convert Thrust/Moments to PWM =========== // 
+        f_thrust = F_thrust/4.0f;
+        f_roll = M.x/(4.0f*dp);
+        f_pitch = M.y/(4.0f*dp);
+        f_yaw = M.z/(4.0*c_tf);
+
+        f_thrust_pwm = thrust2PWM(f_thrust);
+        f_roll_pwm = thrust2PWM(f_roll);
+        f_pitch_pwm = thrust2PWM(f_pitch);
+        f_yaw_pwm = thrust2PWM(f_yaw);
+
+
+        // =========== Insert PWM values into control struct =========== // 
+        control->thrust = f_thrust_pwm;
+        control->roll = f_roll_pwm/2;
+        control->pitch = f_pitch_pwm/2;
+        control->yaw = f_yaw_pwm/2;
     }
-
-
-    RdT_R = mmul(mtranspose(R_d), R);    // [R_d'*R]
-    RT_Rd = mmul(mtranspose(R), R_d);    // [R'*R_d]
-
-    temp1_v = dehat(msub(RdT_R, RT_Rd)); // [dehat(R_d'*R - R'*R)]
-    e_R = vscl(0.5f, temp1_v);           // Rotation error | [eR = 0.5*dehat(R_d'*R - R'*R)]
-
-    temp1_v = mvmul(RT_Rd, omega_d);     // [R.transpose()*R_d*omega_d]
-    e_omega = vsub(stateOmega, temp1_v); // Ang. vel error | [e_omega = omega - R.transpose()*R_d*omega_d] 
-
-
-    // =========== Control Equations =========== // 
-    /* [M = -kp_R*e_R - kd_R*e_omega + Gyro_dyn] */
-
-    temp1_v = vscl(-kp_R, e_R);                         // [-kp_R*e_R]
-    temp2_v = vscl(-kd_R, e_omega);                     // [-kd_R*e_omega]
-    temp3_v = vcross(stateOmega, mvmul(J, stateOmega)); // [omega x J*omega]
-
-    /* [Gyro_dyn = omega.cross(J*omega) - J*(hat(omega)*R.transpose()*R_d*omega_d - R.transpose()*R_d*domega_d)] */
-    temp1_m = mmul(hat(stateOmega), RT_Rd);
-    temp4_v = mvmul(temp1_m, omega_d); // [hat(omega)*R.transpose()*R_d*omega_d]
-    temp5_v = mvmul(RT_Rd, domega_d);
-    temp4_v = mvmul(J, vsub(temp4_v, temp5_v));
-    temp4_v = vneg(temp4_v); // -J*(hat(omega)*R.transpose()*R_d*omega_d - R.transpose()*R_d*domega_d)
-
-
-    // =========== Thrust and Moments [Force Notation] =========== // 
-    F_thrust = vdot(F_thrust_ideal, b3);           // Project ideal thrust onto b3 vector [N]
-    M = vadd4(temp1_v, temp2_v, temp3_v, temp4_v); // Control moments [Nm]
-    
-
-    // =========== Convert Thrust/Moments to PWM =========== // 
-    f_thrust = F_thrust/4.0f;
-    f_roll = M.x/(4.0f*dp);
-    f_pitch = M.y/(4.0f*dp);
-    f_yaw = M.z/(4.0*c_tf);
-
-    f_thrust_pwm = thrust2PWM(f_thrust);
-    f_roll_pwm = thrust2PWM(f_roll);
-    f_pitch_pwm = thrust2PWM(f_pitch);
-    f_yaw_pwm = thrust2PWM(f_yaw);
-
-
-    // =========== Insert PWM values into control struct =========== // 
-    control->thrust = f_thrust_pwm;
-    control->roll = f_roll_pwm/2;
-    control->pitch = f_pitch_pwm/2;
-    control->yaw = f_yaw_pwm/2;
-
 }
 
 
 // PARAMETER GROUPS
 PARAM_GROUP_START(GTC_Params)
-PARAM_ADD(PARAM_FLOAT, X_kp, &kp_x)
-PARAM_ADD(PARAM_FLOAT, X_kd, &kd_x)
+PARAM_ADD(PARAM_FLOAT, X_kp, &kp_xc)
+PARAM_ADD(PARAM_FLOAT, X_kd, &kd_xc)
 PARAM_ADD(PARAM_FLOAT, X_ki, &ki_x) 
-PARAM_ADD(PARAM_FLOAT, R_kp, &kp_R)
-PARAM_ADD(PARAM_FLOAT, R_kd, &kd_R)
+PARAM_ADD(PARAM_FLOAT, R_kp, &kp_Rc)
+PARAM_ADD(PARAM_FLOAT, R_kd, &kd_Rc)
 PARAM_ADD(PARAM_FLOAT, R_ki, &ki_R)
 PARAM_ADD(PARAM_UINT8, AttCtrl, &attCtrlEnable)
 PARAM_GROUP_STOP(GTC_Params)

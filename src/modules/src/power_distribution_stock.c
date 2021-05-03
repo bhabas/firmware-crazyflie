@@ -34,6 +34,7 @@
 #include "platform.h"
 #include "motors.h"
 #include "debug.h"
+#include "controller.h"
 
 static bool motorSetEnable = false;
 
@@ -83,13 +84,37 @@ void powerStop()
 
 void powerDistribution(const control_t *control)
 {
-  // Default 'X' Configuration
-  int16_t r = control->roll / 2.0f; // Divide roll thrust between each motor
-  int16_t p = control->pitch / 2.0f;
-  motorPower.m1 = limitThrust(control->thrust - r + p + control->yaw); // Add respective thrust components
-  motorPower.m2 = limitThrust(control->thrust - r - p - control->yaw);
-  motorPower.m3 =  limitThrust(control->thrust + r - p + control->yaw);
-  motorPower.m4 =  limitThrust(control->thrust + r + p - control->yaw);
+  
+
+  if (getControllerType() == ControllerTypeGTC)
+  {
+    // Note: control struct has int16_t datatype with PWM limit of 32,767 for roll, pitch, and yaw. 
+    // So values are compressed in half in GTC and re-expanded here to preserve values greater than 32,767
+    int32_t r = (control->roll)*2; 
+    int32_t p = (control->pitch)*2;
+    int32_t y = (control->yaw)*2;
+
+    motorPower.m1 = limitThrust(control->thrust - r - p - y); // Add respective thrust components and limit to (0 <= PWM <= 65,535)
+    motorPower.m2 = limitThrust(control->thrust - r + p + y);
+    motorPower.m3 = limitThrust(control->thrust + r + p - y);
+    motorPower.m4 = limitThrust(control->thrust + r - p + y);
+    
+    motorPower.m1 = 0;
+    motorPower.m2 = 0;
+    motorPower.m3 = 0;
+    motorPower.m4 = 0;
+    // consolePrintf("GTC Controller Running\n");
+  }
+  else
+  {
+    // Default 'X' Configuration
+    int16_t r = control->roll / 2.0f; // Divide roll thrust between each motor
+    int16_t p = control->pitch / 2.0f;
+    motorPower.m1 = limitThrust(control->thrust - r + p + control->yaw); // Add respective thrust components
+    motorPower.m2 = limitThrust(control->thrust - r - p - control->yaw);
+    motorPower.m3 =  limitThrust(control->thrust + r - p + control->yaw);
+    motorPower.m4 =  limitThrust(control->thrust + r + p - control->yaw);
+  }
   
 
   if (motorSetEnable)

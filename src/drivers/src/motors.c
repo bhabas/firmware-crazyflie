@@ -233,8 +233,8 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust) // motor_ID, thrust [PWM]
   #ifdef ENABLE_THRUST_BAT_COMPENSATED
     if (motorMap[id]->drvType == BRUSHED) // Set PWM value w/ battery compensation
     {
-      float thrust = ((float)ithrust / 65536.0f) * 60; // [g]
-      float volts = -0.0006239f * thrust * thrust + 0.088f * thrust; // Map thrust called to voltage
+      float thrust = ((float)ithrust / 65536.0f) * 60; // Convert desired PWM to g but why 60g if each motor maxes out at 15g
+      float volts = -0.0006239f * thrust * thrust + 0.088f * thrust; // Map thrust [g] to [V]
       float supply_voltage = pmGetBatteryVoltage();
       float percentage = volts / supply_voltage;
       percentage = percentage > 1.0f ? 1.0f : percentage; // If % > 100%, then cap at 100% else keep same

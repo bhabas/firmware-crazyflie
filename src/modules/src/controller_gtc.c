@@ -25,7 +25,7 @@ static float dp = 0.028284; // COM to Prop along x-axis [m]
                             // [dp = d*sin(45 deg)]
 
 static float const kf = 2.2e-8f;    // Thrust Coeff [N/(rad/s)^2]
-static float const c_tf = 0.0061f;  // Moment Coeff [Nm/N]
+static float const c_tf = 0.00618f;  // Moment Coeff [Nm/N]
 
 
 // LOGGING VARIABLES
@@ -35,54 +35,66 @@ static float cmd_pitch;
 static float cmd_yaw;
 
 // STATE ERRORS
-struct vec e_x;     // Pos-error [m]
-struct vec e_v;     // Vel-error [m/s]
-struct vec e_R;     // Rotation-error [rad]
-struct vec e_omega; // Omega-error [rad/s]
+static struct vec e_x;     // Pos-error [m]
+static struct vec e_v;     // Vel-error [m/s]
+static struct vec e_R;     // Rotation-error [rad]
+static struct vec e_omega; // Omega-error [rad/s]
 
 // STATE VALUES
-struct vec statePos = {0.0f,0.0f,0.0f};         // Pos [m]
-struct vec stateVel = {0.0f,0.0f,0.0f};         // Vel [m/s]
-struct quat stateQuat = {0.0f,0.0f,0.0f,1.0f};  // Orientation
-struct vec stateOmega = {0.0f,0.0f,0.0f};       // Angular Rate [rad/s]
+static struct vec statePos = {0.0f,0.0f,0.0f};         // Pos [m]
+static struct vec stateVel = {0.0f,0.0f,0.0f};         // Vel [m/s]
+static struct quat stateQuat = {0.0f,0.0f,0.0f,1.0f};  // Orientation
+static struct vec stateOmega = {0.0f,0.0f,0.0f};       // Angular Rate [rad/s]
 
-struct mat33 R; // Orientation as rotation matrix
-struct vec stateEul = {0.0f,0.0f,0.0f}; // Pose in Euler Angles [YZX Notation]
+static struct mat33 R; // Orientation as rotation matrix
+static struct vec stateEul = {0.0f,0.0f,0.0f}; // Pose in Euler Angles [YZX Notation]
 
 // DESIRED STATES
-struct vec x_d = {0.0f,0.0f,1.0f}; // Pos-desired [m]
-struct vec v_d = {0.0f,0.0f,0.0f}; // Vel-desired [m/s]
-struct vec a_d = {0.0f,0.0f,0.0f}; // Acc-desired [m/s^2]
+static struct vec x_d = {0.0f,0.0f,0.0f}; // Pos-desired [m]
+static struct vec v_d = {0.0f,0.0f,0.0f}; // Vel-desired [m/s]
+static struct vec a_d = {0.0f,0.0f,0.0f}; // Acc-desired [m/s^2]
 
-struct quat quat_d = {0.0f,0.0f,0.0f,1.0f}; // Orientation-desired [qx,qy,qz,qw]
-struct vec eul_d = {0.0f,0.0f,0.0f};        // Euler Angle-desired [rad? deg? TBD]
-struct vec omega_d = {0.0f,0.0f,0.0f};      // Omega-desired [rad/s]
-struct vec domega_d = {0.0f,0.0f,0.0f};     // Ang. Acc-desired [rad/s^2]
+static struct quat quat_d = {0.0f,0.0f,0.0f,1.0f}; // Orientation-desired [qx,qy,qz,qw]
+static struct vec eul_d = {0.0f,0.0f,0.0f};        // Euler Angle-desired [rad? deg? TBD]
+static struct vec omega_d = {0.0f,0.0f,0.0f};      // Omega-desired [rad/s]
+static struct vec domega_d = {0.0f,0.0f,0.0f};     // Ang. Acc-desired [rad/s^2]
 
-struct vec b1_d = {1.0f,0.0f,0.0f};    // Desired body x-axis in global coord.
-struct vec b2_d;    // Desired body y-axis in global coord.
-struct vec b3_d;    // Desired body z-axis in global coord.
-struct vec b3;      // Current body z-axis in global coord.
+static struct vec b1_d = {1.0f,0.0f,0.0f};    // Desired body x-axis in global coord.
+static struct vec b2_d;    // Desired body y-axis in global coord.
+static struct vec b3_d;    // Desired body z-axis in global coord.
+static struct vec b3;      // Current body z-axis in global coord.
 
-struct mat33 R_d;   // Desired rotational matrix from b_d vectors
+static struct mat33 R_d;   // Desired rotational matrix from b_d vectors
 
-struct vec e_3 = {0.0f, 0.0f, 1.0f};    // Global z-axis
+static struct vec e_3 = {0.0f, 0.0f, 1.0f};    // Global z-axis
 
-struct vec F_thrust_ideal;
-struct vec M;
-float F_thrust; // Thrust motor thrust [N]
+static struct vec F_thrust_ideal;
+static struct vec M;
+static float F_thrust; // Thrust motor thrust [N]
 
 // TEMPORARY CALC VECS/MATRICES
-struct vec temp1_v; 
-struct vec temp2_v;
-struct vec temp3_v;
-struct vec temp4_v;
-struct vec temp5_v;
+static struct vec temp1_v; 
+static struct vec temp2_v;
+static struct vec temp3_v;
+static struct vec temp4_v;
+static struct vec temp5_v;
 
 
-struct mat33 RdT_R; // Rd' * R
-struct mat33 RT_Rd; // R' * Rd
-struct mat33 temp1_m;  
+static struct mat33 RdT_R; // Rd' * R
+static struct mat33 RT_Rd; // R' * Rd
+static struct mat33 temp1_m;  
+
+
+// MOTOR THRUSTS
+static float f_thrust; // Thrust motor thrust [N]
+static float f_roll;   // Roll motor thrust [N]
+static float f_pitch;  // Pitch motor thrust [N]
+static float f_yaw;    // Yaw motor thrust [N]
+
+static int32_t f_thrust_pwm; 
+static int32_t f_roll_pwm;   
+static int32_t f_pitch_pwm; 
+static int32_t f_yaw_pwm;  
 
 
 // CONTROLLER GAINS
@@ -90,11 +102,11 @@ static float kp_x = 0.7f;   // Pos. Proportional Gain
 static float kd_x = 0.25f;  // Pos. Derivative Gain
 static float ki_x = 0.0f;   // Pos. Integral Gain
 
-static float kp_R = 0.05f;  // Rot. Proportional Gain
-static float kd_R = 0.008f;  // Rot. Derivative Gain
+static float kp_R = 0.004f;  // Rot. Proportional Gain
+static float kd_R = 0.0008f;  // Rot. Derivative Gain
 static float ki_R = 0.0f;   // Rot. Integral Gain
 
-
+static bool attCtrlEnable = true;
 
 void controllerGTCInit(void)
 {
@@ -122,31 +134,35 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
     // SYSTEM PARAMETERS 
     J = mdiag(1.65717e-5f, 1.66556e-5f, 2.92617e-5f); // Rotational Inertia of CF [kg m^2]
 
-    // // =========== State Definitions =========== //
-    // statePos = mkvec(state->position.x*0, state->position.y*0, state->position.z);                      // [m]
-    // stateVel = mkvec(state->velocity.x*0, state->velocity.y*0, state->velocity.z);                      // [m]
-    // stateOmega = mkvec(radians(sensors->gyro.x), radians(sensors->gyro.y), radians(sensors->gyro.z));   // [rad/s]
-    // stateQuat = mkquat(state->attitudeQuaternion.x,
-    //                    state->attitudeQuaternion.y,
-    //                    state->attitudeQuaternion.z,
-    //                    state->attitudeQuaternion.w);
-
+    // =========== State Definitions =========== //
+    statePos = mkvec(state->position.x*0, state->position.y*0, state->position.z);                      // [m]
+    stateVel = mkvec(state->velocity.x*0, state->velocity.y*0, state->velocity.z);                      // [m]
+    stateOmega = mkvec(radians(sensors->gyro.x), radians(sensors->gyro.y), radians(sensors->gyro.z));   // [rad/s]
+    stateQuat = mkquat(state->attitudeQuaternion.x,
+                       state->attitudeQuaternion.y,
+                       state->attitudeQuaternion.z,
+                       state->attitudeQuaternion.w);
     
-    // // EULER ANGLES EXPRESSED IN YZX NOTATION
-    // stateEul = quat2eul(stateQuat);
-    // stateEul.x = degrees(stateEul.x);
-    // stateEul.y = degrees(stateEul.y);
-    // stateEul.z = degrees(stateEul.z);
+    // EULER ANGLES EXPRESSED IN YZX NOTATION
+    stateEul = quat2eul(stateQuat);
+    stateEul.x = degrees(stateEul.x);
+    stateEul.y = degrees(stateEul.y);
+    stateEul.z = degrees(stateEul.z);
 
-    // // =========== State Setpoints =========== //
-    // x_d = mkvec(setpoint->position.x*0, setpoint->position.y*0, setpoint->position.z);             // Pos-desired [m]
-    // v_d = mkvec(setpoint->velocity.x*0, setpoint->velocity.y*0, setpoint->velocity.z);             // Vel-desired [m/s]
-    // a_d = mkvec(setpoint->acceleration.x*0, setpoint->acceleration.y*0, setpoint->acceleration.z*0); // Acc-desired [m/s^2]
+    // =========== State Setpoints =========== //
+    x_d = mkvec(setpoint->position.x*0, setpoint->position.y*0, setpoint->position.z);             // Pos-desired [m]
+    v_d = mkvec(setpoint->velocity.x*0, setpoint->velocity.y*0, setpoint->velocity.z);             // Vel-desired [m/s]
+    a_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z); // Acc-desired [m/s^2]
 
-    // omega_d = mkvec(radians(setpoint->attitudeRate.roll)*0,
-    //                 radians(setpoint->attitudeRate.pitch)*0,
-    //                 radians(setpoint->attitudeRate.yaw)*0);         // Omega-desired [rad/s]
-    // domega_d = mkvec(radians(0.0f), radians(0.0f), radians(0.0f));  // Omega-Accl. [rad/s^2]
+    omega_d = mkvec(radians(setpoint->attitudeRate.roll),
+                    radians(setpoint->attitudeRate.pitch),
+                    radians(setpoint->attitudeRate.yaw));         // Omega-desired [rad/s]
+    domega_d = mkvec(radians(0.0f), radians(0.0f), radians(0.0f));  // Omega-Accl. [rad/s^2]
+
+    eul_d = mkvec(radians(setpoint->attitude.roll),
+                    -radians(setpoint->attitude.pitch), 
+                    radians(setpoint->attitude.yaw));
+    quat_d = rpy2quat(eul_d); // Desired orientation from eul angles [ZYX NOTATION]
 
 
 
@@ -178,6 +194,12 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
     temp1_v = vnormalize(vcross(b2_d, b3_d));
     R_d = mcolumns(temp1_v, b2_d, b3_d); // Desired rotation matrix from calculations
 
+    // ATTITUDE CONTROL
+    if (attCtrlEnable){ 
+        R_d = quat2rotmat(quat_d); // Desired rotation matrix from att. control
+    }
+
+
     RdT_R = mmul(mtranspose(R_d), R);    // [R_d'*R]
     RT_Rd = mmul(mtranspose(R), R_d);    // [R'*R_d]
 
@@ -203,77 +225,28 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
     temp4_v = vneg(temp4_v); // -J*(hat(omega)*R.transpose()*R_d*omega_d - R.transpose()*R_d*domega_d)
 
 
-    // // =========== Thrust and Moments [Force Notation] =========== // 
+    // =========== Thrust and Moments [Force Notation] =========== // 
     F_thrust = vdot(F_thrust_ideal, b3);           // Project ideal thrust onto b3 vector [N]
     M = vadd4(temp1_v, temp2_v, temp3_v, temp4_v); // Control moments [Nm]
-
-    if (tick%200 == 0)
-    {   consolePrintf("======== Debug Start ======\n");
-        consolePrintf("\n==== STATES ====\n");
-        consolePrintf("Pos: ");
-        printvec(statePos);
-        consolePrintf("Vel: ");
-        printvec(stateVel);
-        consolePrintf("R: \n");
-        printmat(R);
-        consolePrintf("Eul: ");
-        printvec(stateEul);
-        consolePrintf("Omega: ");
-        printvec(stateOmega);
-
-        consolePrintf("\n==== SETPOINTS ====\n");
-        consolePrintf("x_d: ");
-        printvec(x_d);
-        consolePrintf("v_d: ");
-        printvec(v_d);
-        consolePrintf("omega_d: ");
-        printvec(omega_d);
-        consolePrintf("R_d: \n");
-        printmat(R_d);
-        
-        consolePrintf("\n==== TRANSLATION/THRUST ====\n");
-
-        consolePrintf("F_thrust_ideal: ");
-        printvec(F_thrust_ideal);
-
-        consolePrintf("\n==== DESIRED ROTATION ====\n");
-
-        consolePrintf("b3_d: ");
-        printvec(b3_d);
-        consolePrintf("b2_d: ");
-        printvec(b2_d);
-        consolePrintf("b1_d': ");
-        printvec(temp1_v);
-
-        consolePrintf("R_d: \n");
-        printmat(R_d);
-
-        consolePrintf("\n==== ROTATIONAL ERRORS ====\n");
-        consolePrintf("e_R: ");
-        printvec(e_R);
-        consolePrintf("e_omega: ");
-        printvec(e_omega);
-
-
-        consolePrintf("\n==== CONTROL EQ. ====\n");
-        consolePrintf("Thrust: %0.4f\n",F_thrust);
-        consolePrintf("Moments: \n");
-        printvec(M);
-
-        // consolePrintf("f_thrust: %.3f\n",f_thrust_pwm);
-        // consolePrintf("f_roll: %.3f\n",f_roll_pwm);
-        // consolePrintf("f_pitch: %.3f\n",f_pitch_pwm);
-        // consolePrintf("f_yaw: %.3f\n",f_yaw_pwm);
-
-        // consolePrintf("MS1: %.3f \tMS2: %.3f \tMS3: %.3f \tMS4: %.3f",MS1,MS2,MS3,MS4);
-
-        consolePrintf("\n");
-
-    }
-
-
     
-    
+
+    // =========== Convert Thrust/Moments to PWM =========== // 
+    f_thrust = F_thrust/4.0f;
+    f_roll = M.x/(4.0f*dp);
+    f_pitch = M.y/(4.0f*dp);
+    f_yaw = M.z/(4.0*c_tf);
+
+    f_thrust_pwm = thrust2PWM(f_thrust);
+    f_roll_pwm = thrust2PWM(f_roll);
+    f_pitch_pwm = thrust2PWM(f_pitch);
+    f_yaw_pwm = thrust2PWM(f_yaw);
+
+
+    // =========== Insert PWM values into control struct =========== // 
+    control->thrust = f_thrust_pwm;
+    control->roll = f_roll_pwm/2;
+    control->pitch = f_pitch_pwm/2;
+    control->yaw = f_yaw_pwm/2;
 
 }
 
@@ -286,6 +259,7 @@ PARAM_ADD(PARAM_FLOAT, X_ki, &ki_x)
 PARAM_ADD(PARAM_FLOAT, R_kp, &kp_R)
 PARAM_ADD(PARAM_FLOAT, R_kd, &kd_R)
 PARAM_ADD(PARAM_FLOAT, R_ki, &ki_R)
+PARAM_ADD(PARAM_UINT8, AttCtrl, &attCtrlEnable)
 PARAM_GROUP_STOP(GTC_Params)
 
 PARAM_GROUP_START(GTC_States)
@@ -322,9 +296,9 @@ PARAM_ADD(PARAM_FLOAT, Omega_X, &omega_d.x)
 PARAM_ADD(PARAM_FLOAT, Omega_Y, &omega_d.y)
 PARAM_ADD(PARAM_FLOAT, Omega_Z, &omega_d.z)
 
-// PARAM_ADD(PARAM_FLOAT, Roll, &eul_d.x)
-// PARAM_ADD(PARAM_FLOAT, Pitch, &eul_d.y)
-// PARAM_ADD(PARAM_FLOAT, Yaw, &eul_d.z)
+PARAM_ADD(PARAM_FLOAT, Roll, &eul_d.x)
+PARAM_ADD(PARAM_FLOAT, Pitch, &eul_d.y)
+PARAM_ADD(PARAM_FLOAT, Yaw, &eul_d.z)
 PARAM_GROUP_STOP(GTC_Setpoints)
 
 
@@ -361,9 +335,9 @@ LOG_ADD(LOG_FLOAT, Omega_X, &omega_d.x)
 LOG_ADD(LOG_FLOAT, Omega_Y, &omega_d.y)
 LOG_ADD(LOG_FLOAT, Omega_Z, &omega_d.z)
 
-// LOG_ADD(LOG_FLOAT, Roll, &eul_d.x)
-// LOG_ADD(LOG_FLOAT, Pitch, &eul_d.y)
-// LOG_ADD(LOG_FLOAT, Yaw, &eul_d.z)
+LOG_ADD(LOG_FLOAT, Roll, &eul_d.x)
+LOG_ADD(LOG_FLOAT, Pitch, &eul_d.y)
+LOG_ADD(LOG_FLOAT, Yaw, &eul_d.z)
 LOG_GROUP_STOP(GTC_Setpoints)
 
 

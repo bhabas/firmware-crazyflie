@@ -8,7 +8,7 @@
 #include "controller_indi.h"
 #include "controller_gtc.h"
 
-#define DEFAULT_CONTROLLER ControllerTypePID
+#define DEFAULT_CONTROLLER ControllerTypeGTC
 static ControllerType currentController = ControllerTypeAny;
 
 static void initController();

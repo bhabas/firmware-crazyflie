@@ -112,6 +112,7 @@ static struct vec kp_R = {0.0f,0.0f,0.0f};  // Rot. Proportional Gain
 static struct vec kd_R = {0.0f,0.0f,0.0f};  // Rot. Derivative Gain
 
 static bool attCtrlEnable = true;
+static bool tumbled = false;
 
 void controllerGTCInit(void)
 {
@@ -186,7 +187,9 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         R = quat2rotmat(stateQuat); // Quaternion to Rotation Matrix Conversion
         b3 = mvmul(R, e_3);         // Current body vertical axis in terms of global axes | [b3 = R*e_3] 
 
-
+        if (b3.z <= 0){
+            tumbled = true;
+        }
 
         // =========== Translational Errors & Desired Body-Fixed Axes =========== //
         e_x = vsub(statePos, x_d); // [e_x = pos-x_d]
@@ -238,8 +241,16 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
 
 
         // =========== Thrust and Moments [Force Notation] =========== // 
-        F_thrust = vdot(F_thrust_ideal, b3);           // Project ideal thrust onto b3 vector [N]
-        M = vadd4(temp1_v, temp2_v, temp3_v, temp4_v); // Control moments [Nm]
+        if(!tumbled){
+            F_thrust = vdot(F_thrust_ideal, b3);           // Project ideal thrust onto b3 vector [N]
+            M = vadd4(temp1_v, temp2_v, temp3_v, temp4_v); // Control moments [Nm]
+        }
+        else{
+            F_thrust = 0.0f;
+            M.x = 0.0f;
+            M.y = 0.0f;
+            M.z = 0.0f;
+        }
         
 
         // =========== Convert Thrust/Moments to PWM =========== // 
@@ -272,6 +283,7 @@ PARAM_ADD(PARAM_FLOAT, R_kp, &kp_Rc)
 PARAM_ADD(PARAM_FLOAT, R_kd, &kd_Rc)
 PARAM_ADD(PARAM_FLOAT, R_ki, &ki_R)
 PARAM_ADD(PARAM_UINT8, AttCtrl, &attCtrlEnable)
+PARAM_ADD(PARAM_UINT8, Tumbled, &tumbled)
 PARAM_GROUP_STOP(GTC_Params)
 
 PARAM_GROUP_START(GTC_States)

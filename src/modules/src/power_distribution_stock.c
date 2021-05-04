@@ -99,10 +99,10 @@ void powerDistribution(const control_t *control)
     motorPower.m3 = limitThrust(control->thrust + r + p - y);
     motorPower.m4 = limitThrust(control->thrust + r - p + y);
     
-    motorPower.m1 = 0;
-    motorPower.m2 = 0;
-    motorPower.m3 = 0;
-    motorPower.m4 = 0;
+    // motorPower.m1 = 0;
+    // motorPower.m2 = 0;
+    // motorPower.m3 = 0;
+    // motorPower.m4 = 0;
     // consolePrintf("GTC Controller Running\n");
   }
   else

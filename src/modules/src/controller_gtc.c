@@ -66,11 +66,12 @@ static struct vec b3;      // Current body z-axis in global coord.
 
 static struct mat33 R_d;   // Desired rotational matrix from b_d vectors
 
-static struct vec e_3 = {0.0f, 0.0f, 1.0f};    // Global z-axis
+static struct vec e_3 = {0.0f, 0.0f, 1.0f}; // Global z-axis
 
-static struct vec F_thrust_ideal;
-static struct vec M;
-static float F_thrust; // Thrust motor thrust [N]
+static struct vec F_thrust_ideal;   // Ideal thrust vector
+static float F_thrust;              // Desired body thrust [N]
+static struct vec M;                // Desired body moments [Nm]
+
 
 // TEMPORARY CALC VECS/MATRICES
 static struct vec temp1_v; 
@@ -86,10 +87,10 @@ static struct mat33 temp1_m;
 
 
 // MOTOR THRUSTS
-static float f_thrust; // Thrust motor thrust [N]
-static float f_roll;   // Roll motor thrust [N]
-static float f_pitch;  // Pitch motor thrust [N]
-static float f_yaw;    // Yaw motor thrust [N]
+static float f_thrust; // Motor thrust - Thrust [N]
+static float f_roll;   // Motor thrust - Roll   [N]
+static float f_pitch;  // Motor thrust - Pitch  [N]
+static float f_yaw;    // Motor thrust - Yaw    [N]
 
 static int32_t f_thrust_pwm; 
 static int32_t f_roll_pwm;   
@@ -97,39 +98,60 @@ static int32_t f_pitch_pwm;
 static int32_t f_yaw_pwm;  
 
 
-// CONTROLLER GAINS
-static float kp_xc = 0.7f;  // Pos. Proportional Gain
-static float kd_xc = 0.25f; // Pos. Derivative Gain
-static float ki_x = 0.0f;   // Pos. Integral Gain
+// CONTROLLER GAINS (PD)
+static float kp_xc = 0.7f;      // Pos. Proportional Gain
+static float kd_xc = 0.25f;     // Pos. Derivative Gain
+static float ki_x = 0.0f;       // Pos. Integral Gain
 
-static float kp_Rc = 0.004f;    // Rot. Proportional Gain
-static float kd_Rc = 0.0008f;   // Rot. Derivative Gain
+static float kp_Rc = 0.003f;    // Rot. Proportional Gain
+static float kd_Rc = 0.0005f;   // Rot. Derivative Gain
 static float ki_R = 0.0f;       // Rot. Integral Gain
 
+static float kp_Rzc = 0.004f*0;   // Rot. Proportional Gain [yaw]
+static float kd_Rzc = 0.0005f;  // Rot. Derivative Gain [yaw]
+
+// CONTROLLER GAINS (PID)
+
+
+
+// INIT CTRL GAIN VECTORS
 static struct vec kp_x = {0.0f,0.0f,0.0f};  // Pos. Proportional Gain
 static struct vec kd_x = {0.0f,0.0f,0.0f};  // Pos. Derivative Gain
 static struct vec kp_R = {0.0f,0.0f,0.0f};  // Rot. Proportional Gain
 static struct vec kd_R = {0.0f,0.0f,0.0f};  // Rot. Derivative Gain
 
+// CONTROLLER PARAMETERS
 static bool attCtrlEnable = true;
-static bool tumbled = false;
+static bool tumbled = true;
+static bool setGains = true;
 
 void controllerGTCInit(void)
 {
     controllerGTCTest();
     controllerGTCReset();
-    DEBUG_PRINT("GTC Initiated\n");
+    setctrlGains();
+    consolePrintf("GTC Initiated\n");
 }
 
 void controllerGTCReset(void)
 {
-    DEBUG_PRINT("GTC Reset\n");
+    consolePrintf("GTC Reset\n");
     // Reset errors to zero
 }
 
 bool controllerGTCTest(void)
 {
     return true;
+}
+
+void setctrlGains(void)
+{
+    // CONTROL PARAMETERS
+    kp_x = vrepeat(kp_xc);
+    kd_x = vrepeat(kd_xc);
+    kp_R = vrepeat(kp_Rc); kp_R.z = kp_Rzc;
+    kd_R = vrepeat(kd_Rc); kd_R.z = kd_Rzc;
+
 }
 
 void controllerGTC(control_t *control, setpoint_t *setpoint,
@@ -141,15 +163,14 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         // SYSTEM PARAMETERS 
         J = mdiag(1.65717e-5f, 1.66556e-5f, 2.92617e-5f); // Rotational Inertia of CF [kg m^2]
 
-        // CONTROL PARAMETERS
-        kp_x = vrepeat(kp_xc);
-        kd_x = vrepeat(kd_xc);
-        kp_R = vrepeat(kp_Rc); kp_R.z = 0.0f;
-        kd_R = vrepeat(kd_Rc); kd_R.z = 0.0f;
+        if(setGains){
+            setctrlGains();
+            // setGains = false;
+        }
 
-        // =========== State Definitions =========== //
-        statePos = mkvec(state->position.x*0, state->position.y*0, state->position.z);                      // [m]
-        stateVel = mkvec(state->velocity.x*0, state->velocity.y*0, state->velocity.z);                      // [m]
+        // =========== STATE DEFINITIONS =========== //
+        statePos = mkvec(state->position.x, state->position.y, state->position.z);                      // [m]
+        stateVel = mkvec(state->velocity.x, state->velocity.y, state->velocity.z);                      // [m]
         stateOmega = mkvec(radians(sensors->gyro.x), radians(sensors->gyro.y), radians(sensors->gyro.z));   // [rad/s]
         stateQuat = mkquat(state->attitudeQuaternion.x,
                         state->attitudeQuaternion.y,
@@ -162,9 +183,9 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         stateEul.y = degrees(stateEul.y);
         stateEul.z = degrees(stateEul.z);
 
-        // =========== State Setpoints =========== //
-        x_d = mkvec(setpoint->position.x*0, setpoint->position.y*0, setpoint->position.z);             // Pos-desired [m]
-        v_d = mkvec(setpoint->velocity.x*0, setpoint->velocity.y*0, setpoint->velocity.z);             // Vel-desired [m/s]
+        // =========== STATE SETPOINTS =========== //
+        x_d = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z);             // Pos-desired [m]
+        v_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);             // Vel-desired [m/s]
         a_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z); // Acc-desired [m/s^2]
 
         omega_d = mkvec(radians(setpoint->attitudeRate.roll),
@@ -181,17 +202,18 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
 
 
 
-        // =========== Rotation Matrix =========== //
+        // =========== ROTATION MATRIX =========== //
         // R changes Body axes to be in terms of Global axes
         // https://www.andre-gaschler.com/rotationconverter/
         R = quat2rotmat(stateQuat); // Quaternion to Rotation Matrix Conversion
         b3 = mvmul(R, e_3);         // Current body vertical axis in terms of global axes | [b3 = R*e_3] 
 
+        // TUMBLE DETECTION
         if (b3.z <= 0){
             tumbled = true;
         }
 
-        // =========== Translational Errors & Desired Body-Fixed Axes =========== //
+        // =========== TRANSLATIONAL ERRORS & DESIRED BODY-FIXED AXES =========== //
         e_x = vsub(statePos, x_d); // [e_x = pos-x_d]
         e_v = vsub(stateVel, v_d); // [e_v = vel-v_d]
 
@@ -203,7 +225,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         F_thrust_ideal = vadd4(temp1_v, temp2_v, temp3_v, temp4_v); 
 
 
-        // =========== Rotational Errors =========== // 
+        // =========== ROTATIONAL ERRORS =========== // 
         b3_d = vnormalize(F_thrust_ideal);
         b2_d = vnormalize(vcross(b3_d, b1_d)); // [b3_d x b1_d] | body-fixed horizontal axis
         temp1_v = vnormalize(vcross(b2_d, b3_d));
@@ -225,7 +247,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         e_omega = vsub(stateOmega, temp1_v); // Ang. vel error | [e_omega = omega - R.transpose()*R_d*omega_d] 
 
 
-        // =========== Control Equations =========== // 
+        // =========== CONTROL EQUATIONS =========== // 
         /* [M = -kp_R*e_R - kd_R*e_omega + Gyro_dyn] */
 
         temp1_v = veltmul(vneg(kp_R), e_R);                         // [-kp_R*e_R]
@@ -240,20 +262,26 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         temp4_v = vneg(temp4_v); // -J*(hat(omega)*R.transpose()*R_d*omega_d - R.transpose()*R_d*domega_d)
 
 
-        // =========== Thrust and Moments [Force Notation] =========== // 
+        // =========== THRUST AND MOMENTS [FORCE NOTATION] =========== // 
         if(!tumbled){
             F_thrust = vdot(F_thrust_ideal, b3);           // Project ideal thrust onto b3 vector [N]
             M = vadd4(temp1_v, temp2_v, temp3_v, temp4_v); // Control moments [Nm]
         }
         else{
+            // consolePrintf("System Tumbled: \n");
             F_thrust = 0.0f;
             M.x = 0.0f;
             M.y = 0.0f;
             M.z = 0.0f;
         }
+
+        // if(setpoint->mode.z != modeDisable){
+        //     F_thrust = vdot(F_thrust_ideal, b3);           // Project ideal thrust onto b3 vector [N]
+        //     M = vadd4(temp1_v, temp2_v, temp3_v, temp4_v); // Control moments [Nm]
+        // }
         
 
-        // =========== Convert Thrust/Moments to PWM =========== // 
+        // =========== CONVERT THRUSTS AND MOMENTS TO PWM =========== // 
         f_thrust = F_thrust/4.0f;
         f_roll = M.x/(4.0f*dp);
         f_pitch = M.y/(4.0f*dp);
@@ -265,12 +293,13 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         f_yaw_pwm = thrust2PWM(f_yaw);
 
 
-        // =========== Insert PWM values into control struct =========== // 
+        // =========== INSERT PWM VALUES INTO CONTROL STRUCT =========== // 
         control->thrust = f_thrust_pwm;
         control->roll = f_roll_pwm/2;
         control->pitch = f_pitch_pwm/2;
         control->yaw = f_yaw_pwm/2;
     }
+
 }
 
 
@@ -282,30 +311,12 @@ PARAM_ADD(PARAM_FLOAT, X_ki, &ki_x)
 PARAM_ADD(PARAM_FLOAT, R_kp, &kp_Rc)
 PARAM_ADD(PARAM_FLOAT, R_kd, &kd_Rc)
 PARAM_ADD(PARAM_FLOAT, R_ki, &ki_R)
+PARAM_ADD(PARAM_FLOAT, R_kpz, &kp_Rzc)
+PARAM_ADD(PARAM_FLOAT, R_kdz, &kd_Rzc)
 PARAM_ADD(PARAM_UINT8, AttCtrl, &attCtrlEnable)
 PARAM_ADD(PARAM_UINT8, Tumbled, &tumbled)
+PARAM_ADD(PARAM_UINT8, SetGains, &setGains)
 PARAM_GROUP_STOP(GTC_Params)
-
-PARAM_GROUP_START(GTC_States)
-PARAM_ADD(PARAM_FLOAT, Pos_X, &statePos.x)
-PARAM_ADD(PARAM_FLOAT, Pos_Y, &statePos.y)
-PARAM_ADD(PARAM_FLOAT, Pos_Z, &statePos.z)
-
-PARAM_ADD(PARAM_FLOAT, Vel_X, &stateVel.x)
-PARAM_ADD(PARAM_FLOAT, Vel_Y, &stateVel.y)
-PARAM_ADD(PARAM_FLOAT, Vel_Z, &stateVel.z)
-
-PARAM_ADD(PARAM_FLOAT, Quat_x, &stateQuat.x)
-PARAM_ADD(PARAM_FLOAT, Quat_y, &stateQuat.y)
-PARAM_ADD(PARAM_FLOAT, Quat_z, &stateQuat.z)
-PARAM_ADD(PARAM_FLOAT, Quat_w, &stateQuat.w)
-
-PARAM_ADD(PARAM_FLOAT, Omega_X, &stateOmega.x)
-PARAM_ADD(PARAM_FLOAT, Omega_Y, &stateOmega.y)
-PARAM_ADD(PARAM_FLOAT, Omega_Z, &stateOmega.z)
-
-
-PARAM_GROUP_STOP(GTC_States)
 
 PARAM_GROUP_START(GTC_Setpoints)
 PARAM_ADD(PARAM_FLOAT, Pos_X, &x_d.x)
@@ -368,7 +379,7 @@ LOG_GROUP_STOP(GTC_Setpoints)
 
 
 LOG_GROUP_START(F_M)
-LOG_ADD(LOG_FLOAT, F_thrust1, &F_thrust)
+LOG_ADD(LOG_FLOAT, F_thrust, &F_thrust)
 LOG_ADD(LOG_FLOAT, M_roll, &M.x)
 LOG_ADD(LOG_FLOAT, M_pitch, &M.y)
 LOG_ADD(LOG_FLOAT, M_yaw, &M.z)

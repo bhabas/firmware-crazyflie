@@ -65,4 +65,6 @@ void stabilizerResetEmergencyStop();
 void stabilizerSetEmergencyStopTimeout(int timeout);
 
 
+uint32_t compressXY(float x, float y);
+
 #endif /* STABILIZER_H_ */

@@ -146,7 +146,7 @@ static void calcSensorToOutputLatency(const sensorData_t *sensorData)
   inToOutLatency = outTimestamp - sensorData->interruptTimestamp;
 }
 
-static inline uint32_t compressXY(float x, float y)
+uint32_t compressXY(float x, float y)
 {
   
   uint16_t xnew, ynew;
@@ -168,7 +168,7 @@ static inline uint32_t compressXY(float x, float y)
   xy = (xnew << 16 | ynew); // Shift xnew by 16 and combine
 
   return xy;
-}
+};
 
 static void compressState()
 {
@@ -196,7 +196,7 @@ static void compressState()
   stateCompressed.ratePitch = -sensorData.gyro.y * deg2millirad;
   stateCompressed.rateYaw = sensorData.gyro.z * deg2millirad;
 
-  // stateCompressed.xy = compressXY(state.position.x,state.position.y);
+  stateCompressed.xy = compressXY(state.position.x,state.position.y);
   // DEBUG_PRINT("%lu \n",stateCompressed.xy);
 }
 
@@ -730,5 +730,5 @@ LOG_ADD(LOG_INT16, rateRoll, &stateCompressed.rateRoll)   // angular velocity - 
 LOG_ADD(LOG_INT16, ratePitch, &stateCompressed.ratePitch)
 LOG_ADD(LOG_INT16, rateYaw, &stateCompressed.rateYaw)
 
-// LOG_ADD(LOG_UINT32, xy, &stateCompressed.xy)
+LOG_ADD(LOG_UINT32, xy, &stateCompressed.xy)
 LOG_GROUP_STOP(stateEstimateZ)

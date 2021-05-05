@@ -107,28 +107,28 @@ static int32_t f_pitch_pwm;
 static int32_t f_yaw_pwm;  
 
 // XY POSITION PID
-static float kp_xy = 0.7f;
-static float kd_xy = 0.25f;
-static float ki_xy = 0.0f;
-static float i_range_xy = 2.0;
+static float P_kp_xy = 0.0f;
+static float P_kd_xy = 0.0f;
+static float P_ki_xy = 0.0f;
+static float i_range_xy = 2.0f;
 
 // Z POSITION PID
-static float kp_z = 0.7f;
-static float kd_z = 0.25f;
-static float ki_z = 0.0f;
-static float i_range_z = 0.4;
+static float P_kp_z = 0.9f;
+static float P_kd_z = 0.25f;
+static float P_ki_z = 0.001f;
+static float i_range_z = 2.0f;
 
 // XY ATTITUDE PID
-static float kR_xy = 0.003f;
-static float kw_xy = 0.0005f;
-static float ki_R_xy = 0.0f;
-static float i_range_R_xy = 1.0;
+static float R_kp_xy = 0.001f;
+static float R_kd_xy = 0.0005f;
+static float R_ki_xy = 0.0f;
+static float i_range_R_xy = 1.0f;
 
 
 // Z ATTITUDE PID
-static float kR_z = 0.003f;
-static float kw_z = 0.0005f;
-static float ki_R_z = 0.0f;
+static float R_kp_z = 0.0003f;
+static float R_kd_z = 0.00005f;
+static float R_ki_z = 0.0f;
 static float i_range_R_z = 1.0f;
 
 // // CONTROLLER GAINS (PD)
@@ -160,8 +160,7 @@ static float dt = (float)(1.0f/RATE_500_HZ);
 
 // CONTROLLER PARAMETERS
 static bool attCtrlEnable = true;
-static bool tumbled = true;
-static bool setGains = true;
+static bool tumbled = false;
 
 void controllerGTCInit(void)
 {
@@ -194,13 +193,13 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         J = mdiag(1.65717e-5f, 1.66556e-5f, 2.92617e-5f); // Rotational Inertia of CF [kg m^2]
 
         // CONTROL GAINS
-        Kp_p = mkvec(kp_xy,kp_xy,kp_z);
-        Kd_p = mkvec(kd_xy,kd_xy,kd_z);
-        Ki_p = mkvec(ki_xy,ki_xy,ki_z);
+        Kp_p = mkvec(P_kp_xy,P_kp_xy,P_kp_z);
+        Kd_p = mkvec(P_kd_xy,P_kd_xy,P_kd_z);
+        Ki_p = mkvec(P_ki_xy,P_ki_xy,P_ki_z);
 
-        Kp_R = mkvec(kR_xy,kR_xy,kR_z);
-        Kd_R = mkvec(kw_xy,kw_xy,kw_z);
-        Ki_R = mkvec(ki_R_xy,ki_R_xy,ki_R_z);
+        Kp_R = mkvec(R_kp_xy,R_kp_xy,R_kp_z);
+        Kd_R = mkvec(R_kd_xy,R_kd_xy,R_kd_z);
+        Ki_R = mkvec(R_ki_xy,R_ki_xy,R_ki_z);
         
 
         // =========== STATE DEFINITIONS =========== //
@@ -219,7 +218,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         stateEul.z = degrees(stateEul.z);
 
         // =========== STATE SETPOINTS =========== //
-        x_d = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z);             // Pos-desired [m]
+        x_d = mkvec(setpoint->position.x, setpoint->position.y, 0.4);             // Pos-desired [m]
         v_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);             // Vel-desired [m/s]
         a_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z); // Acc-desired [m/s^2]
 
@@ -253,14 +252,19 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         e_v = vsub(stateVel, v_d); // [e_v = vel-v_d]
 
         // POS. INTEGRAL ERROR
-        e_PI.x += (-e_x.x)*dt;
+        e_PI.x += (e_x.x)*dt;
         e_PI.x = clamp(e_PI.x, -i_range_xy, i_range_xy);
 
-        e_PI.y += (-e_x.y)*dt;
+        e_PI.y += (e_x.y)*dt;
         e_PI.y = clamp(e_PI.y, -i_range_xy, i_range_xy);
 
-        e_PI.z += (-e_x.z)*dt;
+        e_PI.z += (e_x.z)*dt;
         e_PI.z = clamp(e_PI.z, -i_range_z, i_range_z);
+
+        if(tick%10 == 0)
+        {
+            printvec(e_PI);
+        }
 
         /* [F_thrust_ideal = -kp_x*e_x + -kd_x*e_v + -kI_x*e_PI + m*g*e_3 + m*a_d] */
         temp1_v = veltmul(vneg(Kp_p), e_x);
@@ -332,19 +336,17 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
             F_thrust = vdot(F_thrust_ideal, b3);    // Project ideal thrust onto b3 vector [N]
             M = vadd(R_effort,Gyro_dyn);            // Control moments [Nm]
         }
-        else{
+        if(setpoint->mode.z != modeDisable){
+            F_thrust = vdot(F_thrust_ideal, b3);           // Project ideal thrust onto b3 vector [N]
+            M = vadd4(temp1_v, temp2_v, temp3_v, temp4_v); // Control moments [Nm]
+        }
+        if(tumbled){
             // consolePrintf("System Tumbled: \n");
             F_thrust = 0.0f;
             M.x = 0.0f;
             M.y = 0.0f;
             M.z = 0.0f;
         }
-
-        // if(setpoint->mode.z != modeDisable){
-        //     F_thrust = vdot(F_thrust_ideal, b3);           // Project ideal thrust onto b3 vector [N]
-        //     M = vadd4(temp1_v, temp2_v, temp3_v, temp4_v); // Control moments [Nm]
-        // }
-        
 
         // =========== CONVERT THRUSTS AND MOMENTS TO PWM =========== // 
         f_thrust = F_thrust/4.0f;
@@ -370,19 +372,19 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
 
 // PARAMETER GROUPS
 PARAM_GROUP_START(GTC_Params)
-PARAM_ADD(PARAM_FLOAT, P_kp_xy, &kp_xy)
-PARAM_ADD(PARAM_FLOAT, P_kp_z,  &kp_z)
-PARAM_ADD(PARAM_FLOAT, P_kd_xy, &kd_xy) 
-PARAM_ADD(PARAM_FLOAT, P_kd_z,  &kd_z)
-PARAM_ADD(PARAM_FLOAT, P_ki_xy, &ki_xy)
-PARAM_ADD(PARAM_FLOAT, P_ki_z,  &ki_z)
+PARAM_ADD(PARAM_FLOAT, P_kp_xy, &P_kp_xy)
+PARAM_ADD(PARAM_FLOAT, P_kp_z,  &P_kp_z)
+PARAM_ADD(PARAM_FLOAT, P_kd_xy, &P_kd_xy) 
+PARAM_ADD(PARAM_FLOAT, P_kd_z,  &P_kd_z)
+PARAM_ADD(PARAM_FLOAT, P_ki_xy, &P_ki_xy)
+PARAM_ADD(PARAM_FLOAT, P_ki_z,  &P_ki_z)
 
-PARAM_ADD(PARAM_FLOAT, R_kp_xy, &kR_xy)
-PARAM_ADD(PARAM_FLOAT, R_kp_z,  &kR_z)
-PARAM_ADD(PARAM_FLOAT, R_kd_xy, &kw_xy) 
-PARAM_ADD(PARAM_FLOAT, R_kd_z,  &kw_z)
-PARAM_ADD(PARAM_FLOAT, R_ki_xy, &ki_R_xy)
-PARAM_ADD(PARAM_FLOAT, R_ki_z,  &ki_R_z)
+PARAM_ADD(PARAM_FLOAT, R_kp_xy, &R_kp_xy)
+PARAM_ADD(PARAM_FLOAT, R_kp_z,  &R_kp_z)
+PARAM_ADD(PARAM_FLOAT, R_kd_xy, &R_kd_xy) 
+PARAM_ADD(PARAM_FLOAT, R_kd_z,  &R_kd_z)
+PARAM_ADD(PARAM_FLOAT, R_ki_xy, &R_ki_xy)
+PARAM_ADD(PARAM_FLOAT, R_ki_z,  &R_ki_z)
 
 PARAM_ADD(PARAM_UINT8, AttCtrl, &attCtrlEnable)
 PARAM_ADD(PARAM_UINT8, Tumbled, &tumbled)

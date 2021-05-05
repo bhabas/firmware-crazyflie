@@ -37,6 +37,9 @@
 #include "controller.h"
 
 static bool motorSetEnable = false;
+static bool safeModeEnable = true;
+
+static float MS1,MS2,MS3,MS4; // Motorspeeds [rad/s]
 
 static struct {
   uint32_t m1;
@@ -99,11 +102,6 @@ void powerDistribution(const control_t *control)
     motorPower.m3 = limitThrust(control->thrust + r + p - y);
     motorPower.m4 = limitThrust(control->thrust + r - p + y);
     
-    // motorPower.m1 = 0;
-    // motorPower.m2 = 0;
-    // motorPower.m3 = 0;
-    // motorPower.m4 = 0;
-    // consolePrintf("GTC Controller Running\n");
   }
   else
   {
@@ -115,6 +113,9 @@ void powerDistribution(const control_t *control)
     motorPower.m3 =  limitThrust(control->thrust + r - p + control->yaw);
     motorPower.m4 =  limitThrust(control->thrust + r + p - control->yaw);
   }
+
+
+
   
 
   if (motorSetEnable)
@@ -139,10 +140,27 @@ void powerDistribution(const control_t *control)
       motorPower.m4 = idleThrust;
     }
 
-    motorsSetRatio(MOTOR_M1, motorPower.m1);
-    motorsSetRatio(MOTOR_M2, motorPower.m2);
-    motorsSetRatio(MOTOR_M3, motorPower.m3);
-    motorsSetRatio(MOTOR_M4, motorPower.m4);
+    if(safeModeEnable)
+    {
+      motorsSetRatio(MOTOR_M1, 0);
+      motorsSetRatio(MOTOR_M2, 0);
+      motorsSetRatio(MOTOR_M3, 0);
+      motorsSetRatio(MOTOR_M4, 0);
+    }
+    else{
+      motorsSetRatio(MOTOR_M1, motorPower.m1);
+      motorsSetRatio(MOTOR_M2, motorPower.m2);
+      motorsSetRatio(MOTOR_M3, motorPower.m3);
+      motorsSetRatio(MOTOR_M4, motorPower.m4);
+    }
+
+    // Convert PWM to motor speeds (Forster: Eq. 3.4b)
+    MS1 = 0.04077*motorPower.m1 + 380.836;
+    MS2 = 0.04077*motorPower.m2 + 380.836;
+    MS3 = 0.04077*motorPower.m3 + 380.836;
+    MS4 = 0.04077*motorPower.m4 + 380.836;
+
+    
   }
 }
 
@@ -152,6 +170,7 @@ PARAM_ADD(PARAM_UINT16, m1, &motorPowerSet.m1)
 PARAM_ADD(PARAM_UINT16, m2, &motorPowerSet.m2)
 PARAM_ADD(PARAM_UINT16, m3, &motorPowerSet.m3)
 PARAM_ADD(PARAM_UINT16, m4, &motorPowerSet.m4)
+PARAM_ADD(PARAM_UINT8, SafeMode, &safeModeEnable)
 PARAM_GROUP_STOP(motorPowerSet)
 
 PARAM_GROUP_START(powerDist)
@@ -163,4 +182,8 @@ LOG_ADD(LOG_UINT32, m1, &motorPower.m1)
 LOG_ADD(LOG_UINT32, m2, &motorPower.m2)
 LOG_ADD(LOG_UINT32, m3, &motorPower.m3)
 LOG_ADD(LOG_UINT32, m4, &motorPower.m4)
+LOG_ADD(LOG_FLOAT, MS1, &MS1)
+LOG_ADD(LOG_FLOAT, MS2, &MS2)
+LOG_ADD(LOG_FLOAT, MS3, &MS3)
+LOG_ADD(LOG_FLOAT, MS4, &MS4)
 LOG_GROUP_STOP(motor)

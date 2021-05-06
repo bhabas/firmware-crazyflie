@@ -318,6 +318,8 @@ static void GTCDecoder(setpoint_t *setpoint, uint8_t type, const void *data, siz
   setpoint->cmd_val2 = values->cmd_val2;
   setpoint->cmd_val3 = values->cmd_val3;
   setpoint->cmd_flag = values->cmd_flag;
+
+  setpoint->GTC_cmd_rec = true;
 }
 
 struct fullStatePacket_s {

@@ -16,6 +16,8 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
                                          const uint32_t tick);
+void GTC_Command(setpoint_t *setpoint);
+
 static inline int32_t thrust2PWM(float f) 
 {
     // Conversion values derived from J. Forster

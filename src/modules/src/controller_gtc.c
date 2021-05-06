@@ -161,6 +161,7 @@ static float dt = (float)(1.0f/RATE_500_HZ);
 // CONTROLLER PARAMETERS
 static bool attCtrlEnable = true;
 static bool tumbled = false;
+static bool motorstop_flag = false;
 
 void controllerGTCInit(void)
 {
@@ -182,12 +183,78 @@ bool controllerGTCTest(void)
     return true;
 }
 
+void GTC_Command(setpoint_t *setpoint)
+{   
+    switch(setpoint->cmd_type){
+        case 0: // (Home/Reset)
+            setpoint->position.x = 0.0f;
+            setpoint->position.y = 0.0f;
+            setpoint->position.z = 0.4f;
+
+            setpoint->velocity.x = 0.0f;
+            setpoint->velocity.y = 0.0f;
+            setpoint->velocity.z = 0.0f;
+
+            setpoint->attitudeRate.roll = 0.0f;
+            setpoint->attitudeRate.pitch = 0.0f;
+            setpoint->attitudeRate.yaw = 0.0f;
+
+            break;
+
+        case 1: // Position
+            setpoint->position.x = setpoint->cmd_val1;
+            setpoint->position.y = setpoint->cmd_val2;
+            setpoint->position.z = setpoint->cmd_val3;
+            // flag = setpoint->cmd_flag;
+            break;
+
+        case 2: // Velocity
+            setpoint->velocity.x = setpoint->cmd_val1;
+            setpoint->velocity.y = setpoint->cmd_val2;
+            setpoint->velocity.z = setpoint->cmd_val3;
+            // flag = setpoint->cmd_flag;
+            break;
+
+        case 3: // Attitude
+            break;
+
+        case 4: // Tumble-Detection
+
+            break;
+
+        case 5: // Hard Set All Motorspeeds to Zero
+            motorstop_flag = true;
+            break;
+
+        case 7: // Execute Moment-Based Flip
+
+            break;
+
+        case 8: // Arm Policy Maneuver
+
+            break;
+
+        case 11: // Enable Stickyfoot (lol)
+
+            break;
+
+    }
+    
+    return 0;
+}
+
 
 void controllerGTC(control_t *control, setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
                                          const uint32_t tick)
 {
+    if (setpoint->GTC_cmd_rec == true)
+    {
+        GTC_Command(setpoint);
+        setpoint->GTC_cmd_rec = false;
+    }
+
     if (RATE_DO_EXECUTE(RATE_500_HZ, tick)) {
         // SYSTEM PARAMETERS 
         J = mdiag(1.65717e-5f, 1.66556e-5f, 2.92617e-5f); // Rotational Inertia of CF [kg m^2]
@@ -263,7 +330,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
 
         if(tick%10 == 0)
         {
-            printvec(e_PI);
+            // printvec(e_PI);
         }
 
         /* [F_thrust_ideal = -kp_x*e_x + -kd_x*e_v + -kI_x*e_PI + m*g*e_3 + m*a_d] */
@@ -360,11 +427,19 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         f_yaw_pwm = thrust2PWM(f_yaw);
 
 
-        // =========== INSERT PWM VALUES INTO CONTROL STRUCT =========== // 
-        control->thrust = f_thrust_pwm;
-        control->roll = f_roll_pwm/2;
-        control->pitch = f_pitch_pwm/2;
-        control->yaw = f_yaw_pwm/2;
+        // =========== INSERT PWM VALUES INTO CONTROL STRUCT =========== //
+        if(motorstop_flag){
+            control->thrust = 0.0f;
+            control->roll = 0;
+            control->pitch = 0;
+            control->yaw = 0;
+        }
+        else{
+            control->thrust = f_thrust_pwm;
+            control->roll = f_roll_pwm/2;
+            control->pitch = f_pitch_pwm/2;
+            control->yaw = f_yaw_pwm/2;
+        }
     }
 
 }

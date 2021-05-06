@@ -190,6 +190,7 @@ typedef struct setpoint_s { // These structs are shared across controllers and e
   float cmd_val2;
   float cmd_val3;
   float cmd_flag;
+  bool GTC_cmd_rec;
 
   struct {
     stab_mode_t x;

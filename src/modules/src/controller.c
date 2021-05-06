@@ -1,4 +1,4 @@
-#define DEBUG_MODULE "CONTROLLER"
+#define DEBUG_MODULE "CONTROLLER_GTC"
 #include "debug.h"
 
 #include "cfassert.h"

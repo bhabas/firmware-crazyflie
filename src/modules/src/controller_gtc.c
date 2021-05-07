@@ -107,15 +107,15 @@ static int32_t f_pitch_pwm;
 static int32_t f_yaw_pwm;  
 
 // XY POSITION PID
-static float P_kp_xy = 0.0f;
-static float P_kd_xy = 0.0f;
+static float P_kp_xy = 0.4f;
+static float P_kd_xy = 0.2f;
 static float P_ki_xy = 0.0f;
 static float i_range_xy = 2.0f;
 
 // Z POSITION PID
 static float P_kp_z = 0.9f;
-static float P_kd_z = 0.25f;
-static float P_ki_z = 0.001f;
+static float P_kd_z = 0.4f;
+static float P_ki_z = 0.0f;
 static float i_range_z = 2.0f;
 
 // XY ATTITUDE PID
@@ -159,9 +159,10 @@ static struct vec Ki_R; // Rot. Integral Gains
 static float dt = (float)(1.0f/RATE_500_HZ);
 
 // CONTROLLER PARAMETERS
-static bool attCtrlEnable = true;
+static bool attCtrlEnable = false;
 static bool tumbled = false;
 static bool motorstop_flag = false;
+static bool errorReset = false;
 
 void controllerGTCInit(void)
 {
@@ -189,7 +190,7 @@ void GTC_Command(setpoint_t *setpoint)
         case 0: // (Home/Reset)
             setpoint->position.x = 0.0f;
             setpoint->position.y = 0.0f;
-            setpoint->position.z = 0.4f;
+            setpoint->position.z = 0.6f;
 
             setpoint->velocity.x = 0.0f;
             setpoint->velocity.y = 0.0f;
@@ -249,13 +250,18 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
                                          const state_t *state,
                                          const uint32_t tick)
 {
-    if (setpoint->GTC_cmd_rec == true)
-    {
-        GTC_Command(setpoint);
-        setpoint->GTC_cmd_rec = false;
-    }
+        if (RATE_DO_EXECUTE(RATE_500_HZ, tick)) {
 
-    if (RATE_DO_EXECUTE(RATE_500_HZ, tick)) {
+        if (setpoint->GTC_cmd_rec == true)
+        {
+            GTC_Command(setpoint);
+            setpoint->GTC_cmd_rec = false;
+        }
+
+        if (errorReset){
+            controllerGTCReset();
+        }
+        
         // SYSTEM PARAMETERS 
         J = mdiag(1.65717e-5f, 1.66556e-5f, 2.92617e-5f); // Rotational Inertia of CF [kg m^2]
 
@@ -285,7 +291,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         stateEul.z = degrees(stateEul.z);
 
         // =========== STATE SETPOINTS =========== //
-        x_d = mkvec(setpoint->position.x, setpoint->position.y, 0.4);             // Pos-desired [m]
+        x_d = mkvec(setpoint->position.x,setpoint->position.y,0.5f);             // Pos-desired [m]
         v_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);             // Vel-desired [m/s]
         a_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z); // Acc-desired [m/s^2]
 
@@ -328,22 +334,21 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         e_PI.z += (e_x.z)*dt;
         e_PI.z = clamp(e_PI.z, -i_range_z, i_range_z);
 
-        if(tick%10 == 0)
-        {
-            // printvec(e_PI);
+        if(tick%10 == 0){
+            printvec(e_PI);
         }
 
+        
         /* [F_thrust_ideal = -kp_x*e_x + -kd_x*e_v + -kI_x*e_PI + m*g*e_3 + m*a_d] */
         temp1_v = veltmul(vneg(Kp_p), e_x);
         temp2_v = veltmul(vneg(Kd_p), e_v);
         temp3_v = veltmul(vneg(Ki_p), e_PI);
         P_effort = vadd3(temp1_v,temp2_v,temp3_v);
 
-        temp1_v = vscl(m*g, e_3); // Feed forward term
+        temp1_v = vscl(m*g, e_3); // Feed-forward term
         temp2_v = vscl(m, a_d);
 
         F_thrust_ideal = vadd3(P_effort, temp1_v,temp2_v); 
-
 
         // =========== ROTATIONAL ERRORS =========== // 
         b3_d = vnormalize(F_thrust_ideal);
@@ -450,9 +455,11 @@ PARAM_GROUP_START(GTC_Params)
 PARAM_ADD(PARAM_FLOAT, P_kp_xy, &P_kp_xy)
 PARAM_ADD(PARAM_FLOAT, P_kp_z,  &P_kp_z)
 PARAM_ADD(PARAM_FLOAT, P_kd_xy, &P_kd_xy) 
+PARAM_ADD(PARAM_FLOAT, i_range_xy, &i_range_xy)
 PARAM_ADD(PARAM_FLOAT, P_kd_z,  &P_kd_z)
 PARAM_ADD(PARAM_FLOAT, P_ki_xy, &P_ki_xy)
 PARAM_ADD(PARAM_FLOAT, P_ki_z,  &P_ki_z)
+PARAM_ADD(PARAM_FLOAT, i_range_z, &i_range_z)
 
 PARAM_ADD(PARAM_FLOAT, R_kp_xy, &R_kp_xy)
 PARAM_ADD(PARAM_FLOAT, R_kp_z,  &R_kp_z)
@@ -463,6 +470,7 @@ PARAM_ADD(PARAM_FLOAT, R_ki_z,  &R_ki_z)
 
 PARAM_ADD(PARAM_UINT8, AttCtrl, &attCtrlEnable)
 PARAM_ADD(PARAM_UINT8, Tumbled, &tumbled)
+PARAM_ADD(PARAM_UINT8, Error_Reset, &errorReset)
 PARAM_GROUP_STOP(GTC_Params)
 
 PARAM_GROUP_START(GTC_Setpoints)

@@ -1026,7 +1026,7 @@ static inline void printvec(struct vec v){
 }
 
 static inline void printquat(struct quat q){
-	DEBUG_PRINT("%.4f, %.4f, %.4f\n", (double)q.x, (double)q.y, (double)q.z, (double)q.w);
+	DEBUG_PRINT("%.4f, %.4f, %.4f %.4f\n", (double)q.x, (double)q.y, (double)q.z, (double)q.w);
 	return;
 }
 

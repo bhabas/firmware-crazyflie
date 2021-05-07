@@ -1,4 +1,4 @@
-#define DEBUG_MODULE "CONTROLLER_GTC"
+#define DEBUG_MODULE "CONTROLLER"
 #include "debug.h"
 
 #include "cfassert.h"
@@ -8,7 +8,7 @@
 #include "controller_indi.h"
 #include "controller_gtc.h"
 
-#define DEFAULT_CONTROLLER ControllerTypeGTC
+#define DEFAULT_CONTROLLER ControllerTypePID
 static ControllerType currentController = ControllerTypeAny;
 
 static void initController();

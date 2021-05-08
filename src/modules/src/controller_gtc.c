@@ -187,32 +187,35 @@ bool controllerGTCTest(void)
 void GTC_Command(setpoint_t *setpoint)
 {   
     switch(setpoint->cmd_type){
-        case 0: // (Home/Reset)
-            setpoint->position.x = 0.0f;
-            setpoint->position.y = 0.0f;
-            setpoint->position.z = 0.6f;
+        case 10: // (Home/Reset)
+            // setpoint->position.x = 0.0f;
+            // setpoint->position.y = 0.0f;
+            // setpoint->position.z = 0.6f;
 
-            setpoint->velocity.x = 0.0f;
-            setpoint->velocity.y = 0.0f;
-            setpoint->velocity.z = 0.0f;
+            // setpoint->velocity.x = 0.0f;
+            // setpoint->velocity.y = 0.0f;
+            // setpoint->velocity.z = 0.0f;
 
-            setpoint->attitudeRate.roll = 0.0f;
-            setpoint->attitudeRate.pitch = 0.0f;
-            setpoint->attitudeRate.yaw = 0.0f;
+            // setpoint->attitudeRate.roll = 0.0f;
+            // setpoint->attitudeRate.pitch = 0.0f;
+            // setpoint->attitudeRate.yaw = 0.0f;
+            
 
             break;
 
         case 1: // Position
-            setpoint->position.x = setpoint->cmd_val1;
-            setpoint->position.y = setpoint->cmd_val2;
-            setpoint->position.z = setpoint->cmd_val3;
+            x_d.x = setpoint->cmd_val1;
+            x_d.y = setpoint->cmd_val2;
+            x_d.z = setpoint->cmd_val3;
             // flag = setpoint->cmd_flag;
+            
+            
             break;
 
         case 2: // Velocity
-            setpoint->velocity.x = setpoint->cmd_val1;
-            setpoint->velocity.y = setpoint->cmd_val2;
-            setpoint->velocity.z = setpoint->cmd_val3;
+            // setpoint->velocity.x = setpoint->cmd_val1;
+            // setpoint->velocity.y = setpoint->cmd_val2;
+            // setpoint->velocity.z = setpoint->cmd_val3;
             // flag = setpoint->cmd_flag;
             break;
 
@@ -250,10 +253,11 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
                                          const state_t *state,
                                          const uint32_t tick)
 {
-        if (RATE_DO_EXECUTE(RATE_500_HZ, tick)) {
+    if (RATE_DO_EXECUTE(RATE_500_HZ, tick)) {
 
         if (setpoint->GTC_cmd_rec == true)
         {
+            
             GTC_Command(setpoint);
             setpoint->GTC_cmd_rec = false;
         }
@@ -262,6 +266,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
             controllerGTCReset();
         }
         
+
         // SYSTEM PARAMETERS 
         J = mdiag(1.65717e-5f, 1.66556e-5f, 2.92617e-5f); // Rotational Inertia of CF [kg m^2]
 
@@ -291,7 +296,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         stateEul.z = degrees(stateEul.z);
 
         // =========== STATE SETPOINTS =========== //
-        x_d = mkvec(setpoint->position.x,setpoint->position.y,0.5f);             // Pos-desired [m]
+        // x_d = mkvec(setpoint->position.x,setpoint->position.y,setpoint->position.z);             // Pos-desired [m]
         v_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);             // Vel-desired [m/s]
         a_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z); // Acc-desired [m/s^2]
 
@@ -334,9 +339,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         e_PI.z += (e_x.z)*dt;
         e_PI.z = clamp(e_PI.z, -i_range_z, i_range_z);
 
-        if(tick%10 == 0){
-            printvec(e_PI);
-        }
+
 
         
         /* [F_thrust_ideal = -kp_x*e_x + -kd_x*e_v + -kI_x*e_PI + m*g*e_3 + m*a_d] */
@@ -471,6 +474,7 @@ PARAM_ADD(PARAM_FLOAT, R_ki_z,  &R_ki_z)
 PARAM_ADD(PARAM_UINT8, AttCtrl, &attCtrlEnable)
 PARAM_ADD(PARAM_UINT8, Tumbled, &tumbled)
 PARAM_ADD(PARAM_UINT8, Error_Reset, &errorReset)
+PARAM_ADD(PARAM_UINT8, MotorStop, &motorstop_flag)
 PARAM_GROUP_STOP(GTC_Params)
 
 PARAM_GROUP_START(GTC_Setpoints)

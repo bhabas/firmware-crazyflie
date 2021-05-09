@@ -16,7 +16,7 @@
 #include "physicalConstants.h"
 
 // SYSTEM PARAMETERS
-static float m = CF_MASS;
+static float m = 0.030; // [g]
 static float g = GRAVITY_MAGNITUDE;
 struct mat33 J; // Rotational Inertia Matrix [kg*m^2]
 
@@ -62,7 +62,7 @@ static struct vec eul_d = {0.0f,0.0f,0.0f};        // Euler Angle-desired [rad? 
 static struct vec omega_d = {0.0f,0.0f,0.0f};      // Omega-desired [rad/s]
 static struct vec domega_d = {0.0f,0.0f,0.0f};     // Ang. Acc-desired [rad/s^2]
 
-static struct vec b1_d = {1.0f,0.0f,0.0f};    // Desired body x-axis in global coord.
+static struct vec b1_d = {1.0f,0.0f,0.0f};    // Desired body x-axis in global coord. [x,y,z]
 static struct vec b2_d;    // Desired body y-axis in global coord.
 static struct vec b3_d;    // Desired body z-axis in global coord.
 static struct vec b3;      // Current body z-axis in global coord.
@@ -124,27 +124,17 @@ static float R_kd_xy = 0.0005f;
 static float R_ki_xy = 0.0f;
 static float i_range_R_xy = 1.0f;
 
-
 // Z ATTITUDE PID
 static float R_kp_z = 0.0003f;
 static float R_kd_z = 0.00005f;
 static float R_ki_z = 0.0f;
 static float i_range_R_z = 1.0f;
 
-// // CONTROLLER GAINS (PD)
-// static float kp_xc = 0.7f;      // Pos. Proportional Gain
-// static float kd_xc = 0.25f;     // Pos. Derivative Gain
-// static float ki_x = 0.0f;       // Pos. Integral Gain
-
-// static float kp_Rc = 0.003f;    // Rot. Proportional Gain
-// static float kd_Rc = 0.0005f;   // Rot. Derivative Gain
-// static float ki_R = 0.0f;       // Rot. Integral Gain
-
-// static float kp_Rzc = 0.004f*0;   // Rot. Proportional Gain [yaw]
-// static float kd_Rzc = 0.0005f;  // Rot. Derivative Gain [yaw]
-
-// CONTROLLER GAINS (PID)
-
+// CTRL FLAGS
+static float P_kp_flag = 1.0f;
+static float P_kd_flag = 1.0f;
+static float R_kp_flag = 1.0f;
+static float R_kd_flag = 1.0f;
 
 
 // INIT CTRL GAIN VECTORS
@@ -188,18 +178,19 @@ void GTC_Command(setpoint_t *setpoint)
 {   
     switch(setpoint->cmd_type){
         case 10: // (Home/Reset)
-            // setpoint->position.x = 0.0f;
-            // setpoint->position.y = 0.0f;
-            // setpoint->position.z = 0.6f;
+            x_d.x = 0.0f;
+            x_d.y = 0.0f;
+            x_d.z = 0.0f;
 
-            // setpoint->velocity.x = 0.0f;
-            // setpoint->velocity.y = 0.0f;
-            // setpoint->velocity.z = 0.0f;
+            v_d.x = 0.0f;
+            v_d.y = 0.0f;
+            v_d.z = 0.0f; 
 
-            // setpoint->attitudeRate.roll = 0.0f;
-            // setpoint->attitudeRate.pitch = 0.0f;
-            // setpoint->attitudeRate.yaw = 0.0f;
-            
+
+            P_kp_flag = 1.0f;
+            P_kd_flag = 1.0f; 
+            R_kp_flag = 1.0f;
+            R_kd_flag = 1.0f;
 
             break;
 
@@ -207,16 +198,15 @@ void GTC_Command(setpoint_t *setpoint)
             x_d.x = setpoint->cmd_val1;
             x_d.y = setpoint->cmd_val2;
             x_d.z = setpoint->cmd_val3;
-            // flag = setpoint->cmd_flag;
-            
-            
+            P_kp_flag = setpoint->cmd_flag;
+
             break;
 
         case 2: // Velocity
-            // setpoint->velocity.x = setpoint->cmd_val1;
-            // setpoint->velocity.y = setpoint->cmd_val2;
-            // setpoint->velocity.z = setpoint->cmd_val3;
-            // flag = setpoint->cmd_flag;
+            v_d.x = setpoint->cmd_val1;
+            v_d.y = setpoint->cmd_val2;
+            v_d.z = setpoint->cmd_val3;
+            P_kd_flag = setpoint->cmd_flag;
             break;
 
         case 3: // Attitude
@@ -297,7 +287,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
 
         // =========== STATE SETPOINTS =========== //
         // x_d = mkvec(setpoint->position.x,setpoint->position.y,setpoint->position.z);             // Pos-desired [m]
-        v_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);             // Vel-desired [m/s]
+        // v_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);             // Vel-desired [m/s]
         a_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z); // Acc-desired [m/s^2]
 
         omega_d = mkvec(radians(setpoint->attitudeRate.roll),
@@ -342,10 +332,10 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
 
 
         
-        /* [F_thrust_ideal = -kp_x*e_x + -kd_x*e_v + -kI_x*e_PI + m*g*e_3 + m*a_d] */
-        temp1_v = veltmul(vneg(Kp_p), e_x);
-        temp2_v = veltmul(vneg(Kd_p), e_v);
-        temp3_v = veltmul(vneg(Ki_p), e_PI);
+        /* [F_thrust_ideal = -kp_x*e_x*(kp_x_flag) + -kd_x*e_v + -kI_x*e_PI*(kp_x_flag) + m*g*e_3 + m*a_d] */
+        temp1_v = vscl(P_kp_flag,veltmul(vneg(Kp_p), e_x));
+        temp2_v = vscl(P_kd_flag,veltmul(vneg(Kd_p), e_v));
+        temp3_v = vscl(P_kp_flag,veltmul(vneg(Ki_p), e_PI));
         P_effort = vadd3(temp1_v,temp2_v,temp3_v);
 
         temp1_v = vscl(m*g, e_3); // Feed-forward term
@@ -411,10 +401,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
             F_thrust = vdot(F_thrust_ideal, b3);    // Project ideal thrust onto b3 vector [N]
             M = vadd(R_effort,Gyro_dyn);            // Control moments [Nm]
         }
-        if(setpoint->mode.z != modeDisable){
-            F_thrust = vdot(F_thrust_ideal, b3);           // Project ideal thrust onto b3 vector [N]
-            M = vadd4(temp1_v, temp2_v, temp3_v, temp4_v); // Control moments [Nm]
-        }
+
         if(tumbled){
             // consolePrintf("System Tumbled: \n");
             F_thrust = 0.0f;
@@ -474,6 +461,8 @@ PARAM_ADD(PARAM_FLOAT, R_ki_z,  &R_ki_z)
 PARAM_ADD(PARAM_FLOAT, b1_d_x, &b1_d.x)
 PARAM_ADD(PARAM_FLOAT, b1_d_y, &b1_d.y)
 PARAM_ADD(PARAM_FLOAT, b1_d_z, &b1_d.z)
+
+PARAM_ADD(PARAM_FLOAT, CF_mass, &m)
 
 PARAM_ADD(PARAM_UINT8, AttCtrl, &attCtrlEnable)
 PARAM_ADD(PARAM_UINT8, Tumbled, &tumbled)

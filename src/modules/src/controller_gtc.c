@@ -471,9 +471,9 @@ PARAM_ADD(PARAM_FLOAT, R_kd_z,  &R_kd_z)
 PARAM_ADD(PARAM_FLOAT, R_ki_xy, &R_ki_xy)
 PARAM_ADD(PARAM_FLOAT, R_ki_z,  &R_ki_z)
 
-PARAM_ADD(PARAM_FLOAT, b1_x, &b1_d.x)
-PARAM_ADD(PARAM_FLOAT, b1_y, &b1_d.y)
-PARAM_ADD(PARAM_FLOAT, b1_z, &b1_d.z)
+PARAM_ADD(PARAM_FLOAT, b1_d_x, &b1_d.x)
+PARAM_ADD(PARAM_FLOAT, b1_d_y, &b1_d.y)
+PARAM_ADD(PARAM_FLOAT, b1_d_z, &b1_d.z)
 
 PARAM_ADD(PARAM_UINT8, AttCtrl, &attCtrlEnable)
 PARAM_ADD(PARAM_UINT8, Tumbled, &tumbled)

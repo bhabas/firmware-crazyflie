@@ -72,7 +72,8 @@ static struct mat33 R_d;   // Desired rotational matrix from b_d vectors
 static struct vec e_3 = {0.0f, 0.0f, 1.0f}; // Global z-axis
 
 static struct vec F_thrust_ideal;   // Ideal thrust vector
-static float F_thrust;              // Desired body thrust [N]
+static float F_thrust = 0.0f;              // Desired body thrust [N]
+static float F_thrust_max = 0.64f;          // Max possible body thrust [N}]
 static struct vec M;                // Desired body moments [Nm]
 
 
@@ -108,15 +109,15 @@ static int32_t f_yaw_pwm;
 
 // XY POSITION PID
 static float P_kp_xy = 0.4f;
-static float P_kd_xy = 0.2f;
-static float P_ki_xy = 0.0f;
-static float i_range_xy = 2.0f;
+static float P_kd_xy = 0.4f;
+static float P_ki_xy = 0.05f;
+static float i_range_xy = 0.5f;
 
 // Z POSITION PID
 static float P_kp_z = 0.9f;
-static float P_kd_z = 0.4f;
-static float P_ki_z = 0.0f;
-static float i_range_z = 2.0f;
+static float P_kd_z = 0.35f;
+static float P_ki_z = 0.3f;
+static float i_range_z = 0.25f;
 
 // XY ATTITUDE PID
 static float R_kp_xy = 0.001f;
@@ -125,10 +126,10 @@ static float R_ki_xy = 0.0f;
 static float i_range_R_xy = 1.0f;
 
 // Z ATTITUDE PID
-static float R_kp_z = 0.0003f;
-static float R_kd_z = 0.00005f;
-static float R_ki_z = 0.0f;
-static float i_range_R_z = 1.0f;
+static float R_kp_z = 3e-4f;
+static float R_kd_z = 5e-5f;
+static float R_ki_z = 3e-5f;
+static float i_range_R_z = 0.05f;
 
 // CTRL FLAGS
 static struct vec P_kp_flag = {1.0f,1.0f,1.0f};
@@ -246,19 +247,19 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
                                          const state_t *state,
                                          const uint32_t tick)
 {
-    if (RATE_DO_EXECUTE(RATE_500_HZ, tick)) {
-
-        if (setpoint->GTC_cmd_rec == true)
+    if (setpoint->GTC_cmd_rec == true)
         {
             
             GTC_Command(setpoint);
             setpoint->GTC_cmd_rec = false;
         }
 
-        if (errorReset){
-            controllerGTCReset();
+    if (errorReset){
+        controllerGTCReset();
+        errorReset = false;
         }
-        
+
+    if (RATE_DO_EXECUTE(RATE_500_HZ, tick)) {
 
         // SYSTEM PARAMETERS 
         J = mdiag(1.65717e-5f, 1.66556e-5f, 2.92617e-5f); // Rotational Inertia of CF [kg m^2]
@@ -333,8 +334,6 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         e_PI.z = clamp(e_PI.z, -i_range_z, i_range_z);
 
 
-
-        
         /* [F_thrust_ideal = -kp_x*e_x*(kp_x_flag) + -kd_x*e_v + -kI_x*e_PI*(kp_x_flag) + m*g*e_3 + m*a_d] */
         temp1_v = veltmul(P_kp_flag,veltmul(vneg(Kp_p), e_x));
         temp2_v = veltmul(P_kd_flag,veltmul(vneg(Kd_p), e_v));
@@ -402,6 +401,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         // =========== THRUST AND MOMENTS [FORCE NOTATION] =========== // 
         if(!tumbled){
             F_thrust = vdot(F_thrust_ideal, b3);    // Project ideal thrust onto b3 vector [N]
+            F_thrust = clamp(F_thrust,0.0f,F_thrust_max*0.8f);
             M = vadd(R_effort,Gyro_dyn);            // Control moments [Nm]
         }
 
@@ -438,6 +438,12 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
             control->pitch = f_pitch_pwm/2;
             control->yaw = f_yaw_pwm/2;
         }
+
+        if(tick%20 == 0){
+            DEBUG_PRINT("M_z: %.3f | eR.z: %.3f | eRI.z: %.3f \n",M.z*1000,e_R.z,e_RI.z);
+            
+        }
+
     }
 
 }
@@ -455,11 +461,14 @@ PARAM_ADD(PARAM_FLOAT, P_ki_z,  &P_ki_z)
 PARAM_ADD(PARAM_FLOAT, i_range_z, &i_range_z)
 
 PARAM_ADD(PARAM_FLOAT, R_kp_xy, &R_kp_xy)
-PARAM_ADD(PARAM_FLOAT, R_kp_z,  &R_kp_z)
 PARAM_ADD(PARAM_FLOAT, R_kd_xy, &R_kd_xy) 
-PARAM_ADD(PARAM_FLOAT, R_kd_z,  &R_kd_z)
 PARAM_ADD(PARAM_FLOAT, R_ki_xy, &R_ki_xy)
+PARAM_ADD(PARAM_FLOAT, i_range_R_xy, &i_range_R_xy)
+
+PARAM_ADD(PARAM_FLOAT, R_kp_z,  &R_kp_z)
+PARAM_ADD(PARAM_FLOAT, R_kd_z,  &R_kd_z)
 PARAM_ADD(PARAM_FLOAT, R_ki_z,  &R_ki_z)
+PARAM_ADD(PARAM_FLOAT, i_range_R_z, &i_range_R_z)
 
 PARAM_ADD(PARAM_FLOAT, b1_d_x, &b1_d.x)
 PARAM_ADD(PARAM_FLOAT, b1_d_y, &b1_d.y)

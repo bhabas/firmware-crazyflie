@@ -155,10 +155,10 @@ void powerDistribution(const control_t *control)
     }
 
     // Convert PWM to motor speeds (Forster: Eq. 3.4b)
-    MS1 = 0.04077*motorPower.m1 + 380.836;
-    MS2 = 0.04077*motorPower.m2 + 380.836;
-    MS3 = 0.04077*motorPower.m3 + 380.836;
-    MS4 = 0.04077*motorPower.m4 + 380.836;
+    MS1 = 0.04077f*motorPower.m1 + 380.836f;
+    MS2 = 0.04077f*motorPower.m2 + 380.836f;
+    MS3 = 0.04077f*motorPower.m3 + 380.836f;
+    MS4 = 0.04077f*motorPower.m4 + 380.836f;
 
     
   }

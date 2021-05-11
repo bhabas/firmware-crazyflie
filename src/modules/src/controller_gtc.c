@@ -155,9 +155,16 @@ static bool tumbled = false;
 static bool motorstop_flag = false;
 static bool errorReset = false;
 
+// OPTICAL FLOW STATES
+static float RREV = 0.0f; // [1/s]
+static float OF_x = 0.0f; // [rad/s]
+static float OF_y = 0.0f; // [rad/s] 
+
+static float h_ceiling = 2.50f; // [m]
+
 static struct {
     
-    int16_t OF_x;
+    int16_t OF_x; // [milli-rad/s]
     int16_t OF_y;
     int32_t OF_xy;
     int16_t RREV;
@@ -166,10 +173,14 @@ static struct {
     int16_t Mx;
     int16_t My;
     int16_t Mz;
-} stateEstimateZ_GTC;
+} miscStatesZ_GTC;
 
-static void compressGTCStates(){
-    // stateEstimateZ_GTC.OF_xy = compressXY(x_d.x,x_d.y);
+static void compressMiscStates(){
+
+    
+    miscStatesZ_GTC.OF_xy = compressXY(OF_x,OF_y);
+    miscStatesZ_GTC.OF_y = OF_y * 1000.0f;
+    miscStatesZ_GTC.RREV = RREV * 1000.0f; // [milli-rad/s]
     // setpointZ_GTC.z = x_d.z * 1000.0f;
 
     // setpointZ_GTC.vxy = compressXY(v_d.x,v_d.y);
@@ -335,6 +346,10 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
                         state->attitudeQuaternion.y,
                         state->attitudeQuaternion.z,
                         state->attitudeQuaternion.w);
+
+        RREV = stateVel.z/(h_ceiling - statePos.z);
+        OF_x = stateVel.y/(h_ceiling - statePos.z);
+        OF_y = stateVel.x/(h_ceiling - statePos.z);
         
         // EULER ANGLES EXPRESSED IN YZX NOTATION
         stateEul = quat2eul(stateQuat);
@@ -345,7 +360,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         // =========== STATE SETPOINTS =========== //
         // x_d = mkvec(setpoint->position.x,setpoint->position.y,setpoint->position.z);             // Pos-desired [m]
         // v_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);             // Vel-desired [m/s]
-        a_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z); // Acc-desired [m/s^2]
+        // a_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z); // Acc-desired [m/s^2]
 
         omega_d = mkvec(radians(setpoint->attitudeRate.roll),
                         radians(setpoint->attitudeRate.pitch),
@@ -498,6 +513,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         // }
 
         compressGTCSetpoint();
+        compressMiscStates();
 
     }
 
@@ -537,24 +553,6 @@ PARAM_ADD(PARAM_UINT8, Error_Reset, &errorReset)
 PARAM_ADD(PARAM_UINT8, MotorStop, &motorstop_flag)
 PARAM_GROUP_STOP(GTC_Params)
 
-PARAM_GROUP_START(GTC_Setpoints)
-PARAM_ADD(PARAM_FLOAT, Pos_X, &x_d.x)
-PARAM_ADD(PARAM_FLOAT, Pos_Y, &x_d.y)
-PARAM_ADD(PARAM_FLOAT, Pos_Z, &x_d.z)
-
-PARAM_ADD(PARAM_FLOAT, Vel_X, &v_d.x)
-PARAM_ADD(PARAM_FLOAT, Vel_Y, &v_d.y)
-PARAM_ADD(PARAM_FLOAT, Vel_Z, &v_d.z)
-
-PARAM_ADD(PARAM_FLOAT, Omega_X, &omega_d.x)
-PARAM_ADD(PARAM_FLOAT, Omega_Y, &omega_d.y)
-PARAM_ADD(PARAM_FLOAT, Omega_Z, &omega_d.z)
-
-PARAM_ADD(PARAM_FLOAT, Roll, &eul_d.x)
-PARAM_ADD(PARAM_FLOAT, Pitch, &eul_d.y)
-PARAM_ADD(PARAM_FLOAT, Yaw, &eul_d.z)
-PARAM_GROUP_STOP(GTC_Setpoints)
-
 
 // LOGGING GROUPS
 
@@ -578,14 +576,20 @@ LOG_GROUP_STOP(GTC_State_Est)
 
 LOG_GROUP_START(setpointZ_GTC)
 LOG_ADD(LOG_UINT32, xy, &setpointZ_GTC.xy)
-LOG_ADD(LOG_UINT16, z, &setpointZ_GTC.z)
+LOG_ADD(LOG_INT16, z, &setpointZ_GTC.z)
 
 LOG_ADD(LOG_UINT32, vxy, &setpointZ_GTC.vxy)
-LOG_ADD(LOG_UINT16, vz, &setpointZ_GTC.vz)
+LOG_ADD(LOG_INT16, vz, &setpointZ_GTC.vz)
 
 LOG_ADD(LOG_UINT32, axy, &setpointZ_GTC.axy)
-LOG_ADD(LOG_UINT16, az, &setpointZ_GTC.az)
+LOG_ADD(LOG_INT16, az, &setpointZ_GTC.az)
 LOG_GROUP_STOP(setpointZ_GTC)
+
+LOG_GROUP_START(miscStatesZ_GTC)
+LOG_ADD(LOG_UINT32, OF_xy, &miscStatesZ_GTC.OF_xy)
+LOG_ADD(LOG_INT16, RREV, &miscStatesZ_GTC.RREV)
+LOG_GROUP_STOP(miscStatesZ_GTC)
+
 
 
 

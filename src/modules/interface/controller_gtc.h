@@ -36,8 +36,9 @@ static inline int32_t thrust2PWM(float f)
 
 }        
 
+// Pass in two floats [8 bytes] in range (-32.767,32.766) and compress them to single uint32_t value [4 bytes]
 static inline uint32_t compressXY(float x, float y)
-{// Pass in (%%.%%%) values
+{
   
   uint16_t xnew, ynew;
   uint32_t xy;

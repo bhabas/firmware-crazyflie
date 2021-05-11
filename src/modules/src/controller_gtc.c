@@ -159,8 +159,21 @@ static bool errorReset = false;
 static float RREV = 0.0f; // [1/s]
 static float OF_x = 0.0f; // [rad/s]
 static float OF_y = 0.0f; // [rad/s] 
+static bool flip_flag = false;
 
 static float h_ceiling = 2.50f; // [m]
+
+static uint32_t M1_pwm = 0; 
+static uint32_t M2_pwm = 0; 
+static uint32_t M3_pwm = 0; 
+static uint32_t M4_pwm = 0; 
+
+static float MS1 = 0;
+static float MS2 = 0;
+static float MS3 = 0;
+static float MS4 = 0;
+
+#define limitThrust(VAL) limitUint16(VAL) // Limit PWM value to UINT16_MAX = 65,535
 
 static struct {
     
@@ -169,6 +182,9 @@ static struct {
 
     uint32_t Mxy;   // [N*um]
     uint32_t FMz;   // [mN | N*um]
+
+    uint32_t MS12; // [rad/s*0.01]
+    uint32_t MS34;
 
 } miscStatesZ_GTC;
 
@@ -180,6 +196,9 @@ static void compressMiscStates(){
 
     miscStatesZ_GTC.Mxy = compressXY(M.x*1000.0f,M.y*1000.0f);  // [mN | N*um]
     miscStatesZ_GTC.FMz = compressXY(F_thrust,M.z*1000.0f);
+
+    miscStatesZ_GTC.MS12 = compressXY(MS1*0.01f,MS2*0.01f);     // [rad/s*0.01]
+    miscStatesZ_GTC.MS34 = compressXY(MS3*0.01f,MS4*0.01f);
 
 }
 
@@ -500,15 +519,28 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
             control->yaw = f_yaw_pwm/2;
         }
 
-        if(tick%20 == 0){
-            // DEBUG_PRINT("M_z: %.3f | eR.z: %.3f | eRI.z: %.3f \n",M.z*1000,e_R.z,e_RI.z);
-            DEBUG_PRINT("F_thrust: %.3f | Mx: %.3f | My: %.3f | Mz: %.3f \n",F_thrust,M.x*1e3f,M.y*1e3f,M.z*1e3f);
-            
-        }
+        
+
+        M1_pwm = limitThrust(f_thrust_pwm - f_roll_pwm - f_pitch_pwm - f_yaw_pwm); // Add respective thrust components and limit to (0 <= PWM <= 65,535)
+        M2_pwm = limitThrust(f_thrust_pwm - f_roll_pwm + f_pitch_pwm + f_yaw_pwm);
+        M3_pwm = limitThrust(f_thrust_pwm + f_roll_pwm + f_pitch_pwm - f_yaw_pwm);
+        M4_pwm = limitThrust(f_thrust_pwm + f_roll_pwm - f_pitch_pwm + f_yaw_pwm);
+
+        // Convert PWM to motor speeds (Forster: Eq. 3.4b)
+        MS1 = 0.04077f*M1_pwm + 380.836f;
+        MS2 = 0.04077f*M2_pwm + 380.836f;
+        MS3 = 0.04077f*M3_pwm + 380.836f;
+        MS4 = 0.04077f*M4_pwm + 380.836f;
 
         
         compressGTCSetpoint();
         compressMiscStates();
+
+        if(tick%20 == 0){
+            // DEBUG_PRINT("M_z: %.3f | eR.z: %.3f | eRI.z: %.3f \n",M.z*1000,e_R.z,e_RI.z);
+            DEBUG_PRINT("MS1: %.3f| MS2: %.3f | MS3: %.3f | MS4: %.3f \n",MS1,MS2,MS3,MS4);
+            
+        }
 
     }
 
@@ -583,8 +615,14 @@ LOG_GROUP_STOP(setpointZ_GTC)
 LOG_GROUP_START(miscStatesZ_GTC)
 LOG_ADD(LOG_UINT32, OF_xy, &miscStatesZ_GTC.OF_xy)
 LOG_ADD(LOG_INT16,  RREV, &miscStatesZ_GTC.RREV)
+
 LOG_ADD(LOG_UINT32, M_xy, &miscStatesZ_GTC.Mxy)
 LOG_ADD(LOG_UINT32, FM_z, &miscStatesZ_GTC.FMz)
+
+LOG_ADD(LOG_UINT32, MS12, &miscStatesZ_GTC.MS12)
+LOG_ADD(LOG_UINT32, MS34, &miscStatesZ_GTC.MS34)
+
+LOG_ADD(LOG_UINT8, Flip_Flag, &flip_flag)
 LOG_GROUP_STOP(miscStatesZ_GTC)
 
 

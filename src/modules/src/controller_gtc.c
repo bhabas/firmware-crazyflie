@@ -155,6 +155,59 @@ static bool tumbled = false;
 static bool motorstop_flag = false;
 static bool errorReset = false;
 
+static struct {
+    
+    int16_t OF_x;
+    int16_t OF_y;
+    int32_t OF_xy;
+    int16_t RREV;
+
+    int16_t F_thrust;
+    int16_t Mx;
+    int16_t My;
+    int16_t Mz;
+} stateEstimateZ_GTC;
+
+static void compressGTCStates(){
+    // stateEstimateZ_GTC.OF_xy = compressXY(x_d.x,x_d.y);
+    // setpointZ_GTC.z = x_d.z * 1000.0f;
+
+    // setpointZ_GTC.vxy = compressXY(v_d.x,v_d.y);
+    // setpointZ_GTC.vz = v_d.z * 1000.0f;
+
+    // setpointZ_GTC.axy = compressXY(a_d.x,a_d.y);
+    // setpointZ_GTC.az = a_d.z * 1000.0f;
+}
+
+
+static struct {
+    
+    int32_t xy;  // Compressed position [mm]
+    int16_t z;
+
+    int32_t vxy; // Compressed velocities [mm/s]
+    int16_t vz;
+
+    int32_t axy; // Compress accelerations [mm/s^2]
+    int16_t az;
+
+} setpointZ_GTC;
+
+
+static void compressGTCSetpoint(){
+    setpointZ_GTC.xy = compressXY(x_d.x,x_d.y);
+    setpointZ_GTC.z = x_d.z * 1000.0f;
+
+    setpointZ_GTC.vxy = compressXY(v_d.x,v_d.y);
+    setpointZ_GTC.vz = v_d.z * 1000.0f;
+
+    setpointZ_GTC.axy = compressXY(a_d.x,a_d.y);
+    setpointZ_GTC.az = a_d.z * 1000.0f;
+}
+
+
+
+
 void controllerGTCInit(void)
 {
     controllerGTCTest();
@@ -439,10 +492,12 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
             control->yaw = f_yaw_pwm/2;
         }
 
-        if(tick%20 == 0){
-            DEBUG_PRINT("M_z: %.3f | eR.z: %.3f | eRI.z: %.3f \n",M.z*1000,e_R.z,e_RI.z);
+        // if(tick%20 == 0){
+        //     DEBUG_PRINT("M_z: %.3f | eR.z: %.3f | eRI.z: %.3f \n",M.z*1000,e_R.z,e_RI.z);
             
-        }
+        // }
+
+        compressGTCSetpoint();
 
     }
 
@@ -521,23 +576,16 @@ LOG_ADD(LOG_FLOAT, Omega_Y, &stateOmega.y)
 LOG_ADD(LOG_FLOAT, Omega_Z, &stateOmega.z)
 LOG_GROUP_STOP(GTC_State_Est)
 
-LOG_GROUP_START(GTC_Setpoints)
-LOG_ADD(LOG_FLOAT, Pos_X, &x_d.x)
-LOG_ADD(LOG_FLOAT, Pos_Y, &x_d.y)
-LOG_ADD(LOG_FLOAT, Pos_Z, &x_d.z)
+LOG_GROUP_START(setpointZ_GTC)
+LOG_ADD(LOG_UINT32, xy, &setpointZ_GTC.xy)
+LOG_ADD(LOG_UINT16, z, &setpointZ_GTC.z)
 
-LOG_ADD(LOG_FLOAT, Vel_X, &v_d.x)
-LOG_ADD(LOG_FLOAT, Vel_Y, &v_d.y)
-LOG_ADD(LOG_FLOAT, Vel_Z, &v_d.z)
+LOG_ADD(LOG_UINT32, vxy, &setpointZ_GTC.vxy)
+LOG_ADD(LOG_UINT16, vz, &setpointZ_GTC.vz)
 
-LOG_ADD(LOG_FLOAT, Omega_X, &omega_d.x)
-LOG_ADD(LOG_FLOAT, Omega_Y, &omega_d.y)
-LOG_ADD(LOG_FLOAT, Omega_Z, &omega_d.z)
-
-LOG_ADD(LOG_FLOAT, Roll, &eul_d.x)
-LOG_ADD(LOG_FLOAT, Pitch, &eul_d.y)
-LOG_ADD(LOG_FLOAT, Yaw, &eul_d.z)
-LOG_GROUP_STOP(GTC_Setpoints)
+LOG_ADD(LOG_UINT32, axy, &setpointZ_GTC.axy)
+LOG_ADD(LOG_UINT16, az, &setpointZ_GTC.az)
+LOG_GROUP_STOP(setpointZ_GTC)
 
 
 

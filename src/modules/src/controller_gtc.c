@@ -164,12 +164,11 @@ static float h_ceiling = 2.50f; // [m]
 
 static struct {
     
-    int16_t OF_x; // [milli-rad/s]
-    int16_t OF_y;
-    int32_t OF_xy;
-    int16_t RREV;
+    int32_t OF_xy;  // [milli-rad/s]
+    int16_t RREV;   // [milli-rad/s]
 
-    int16_t F_thrust;
+    int16_t F_thrust; 
+    int16_t Mxy; // [N*um]
     int16_t Mx;
     int16_t My;
     int16_t Mz;
@@ -179,15 +178,11 @@ static void compressMiscStates(){
 
     
     miscStatesZ_GTC.OF_xy = compressXY(OF_x,OF_y);
-    miscStatesZ_GTC.OF_y = OF_y * 1000.0f;
     miscStatesZ_GTC.RREV = RREV * 1000.0f; // [milli-rad/s]
-    // setpointZ_GTC.z = x_d.z * 1000.0f;
 
-    // setpointZ_GTC.vxy = compressXY(v_d.x,v_d.y);
-    // setpointZ_GTC.vz = v_d.z * 1000.0f;
-
-    // setpointZ_GTC.axy = compressXY(a_d.x,a_d.y);
-    // setpointZ_GTC.az = a_d.z * 1000.0f;
+    miscStatesZ_GTC.Mxy = compressXY(M.x*1000.0f,M.y*1000.0f); // [N*um]
+    miscStatesZ_GTC.Mz = M.z*1e6f;
+    miscStatesZ_GTC.F_thrust = F_thrust * 1000.0f; // [mN]
 }
 
 
@@ -507,11 +502,13 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
             control->yaw = f_yaw_pwm/2;
         }
 
-        // if(tick%20 == 0){
-        //     DEBUG_PRINT("M_z: %.3f | eR.z: %.3f | eRI.z: %.3f \n",M.z*1000,e_R.z,e_RI.z);
+        if(tick%20 == 0){
+            // DEBUG_PRINT("M_z: %.3f | eR.z: %.3f | eRI.z: %.3f \n",M.z*1000,e_R.z,e_RI.z);
+            DEBUG_PRINT("F_thrust: %.3f | Mx: %.3f | My: %.3f | Mz: %.3f \n",F_thrust,M.x*1e3f,M.y*1e3f,M.z*1e3f);
             
-        // }
+        }
 
+        
         compressGTCSetpoint();
         compressMiscStates();
 
@@ -588,6 +585,9 @@ LOG_GROUP_STOP(setpointZ_GTC)
 LOG_GROUP_START(miscStatesZ_GTC)
 LOG_ADD(LOG_UINT32, OF_xy, &miscStatesZ_GTC.OF_xy)
 LOG_ADD(LOG_INT16, RREV, &miscStatesZ_GTC.RREV)
+LOG_ADD(LOG_UINT32, M_xy, &miscStatesZ_GTC.Mxy)
+LOG_ADD(LOG_INT16, M_z, &miscStatesZ_GTC.Mz)
+LOG_ADD(LOG_INT16, F_thrust, &miscStatesZ_GTC.F_thrust)
 LOG_GROUP_STOP(miscStatesZ_GTC)
 
 

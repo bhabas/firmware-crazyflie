@@ -164,37 +164,35 @@ static float h_ceiling = 2.50f; // [m]
 
 static struct {
     
-    int32_t OF_xy;  // [milli-rad/s]
+    uint32_t OF_xy; // [milli-rad/s]
     int16_t RREV;   // [milli-rad/s]
 
-    int16_t F_thrust; 
-    int16_t Mxy; // [N*um]
-    int16_t Mx;
-    int16_t My;
-    int16_t Mz;
+    uint32_t Mxy;   // [N*um]
+    uint32_t FMz;   // [mN | N*um]
+
 } miscStatesZ_GTC;
 
 static void compressMiscStates(){
 
     
-    miscStatesZ_GTC.OF_xy = compressXY(OF_x,OF_y);
-    miscStatesZ_GTC.RREV = RREV * 1000.0f; // [milli-rad/s]
+    miscStatesZ_GTC.OF_xy = compressXY(OF_x,OF_y);              // [milli-rad/s]
+    miscStatesZ_GTC.RREV = RREV * 1000.0f;                      // [milli-rad/s]
 
-    miscStatesZ_GTC.Mxy = compressXY(M.x*1000.0f,M.y*1000.0f); // [N*um]
-    miscStatesZ_GTC.Mz = M.z*1e6f;
-    miscStatesZ_GTC.F_thrust = F_thrust * 1000.0f; // [mN]
+    miscStatesZ_GTC.Mxy = compressXY(M.x*1000.0f,M.y*1000.0f);  // [mN | N*um]
+    miscStatesZ_GTC.FMz = compressXY(F_thrust,M.z*1000.0f);
+
 }
 
 
 static struct {
     
-    int32_t xy;  // Compressed position [mm]
+    uint32_t xy;  // Compressed position [mm]
     int16_t z;
 
-    int32_t vxy; // Compressed velocities [mm/s]
+    uint32_t vxy; // Compressed velocities [mm/s]
     int16_t vz;
 
-    int32_t axy; // Compress accelerations [mm/s^2]
+    uint32_t axy; // Compress accelerations [mm/s^2]
     int16_t az;
 
 } setpointZ_GTC;
@@ -573,21 +571,20 @@ LOG_GROUP_STOP(GTC_State_Est)
 
 LOG_GROUP_START(setpointZ_GTC)
 LOG_ADD(LOG_UINT32, xy, &setpointZ_GTC.xy)
-LOG_ADD(LOG_INT16, z, &setpointZ_GTC.z)
+LOG_ADD(LOG_INT16,  z, &setpointZ_GTC.z)
 
 LOG_ADD(LOG_UINT32, vxy, &setpointZ_GTC.vxy)
-LOG_ADD(LOG_INT16, vz, &setpointZ_GTC.vz)
+LOG_ADD(LOG_INT16,  vz, &setpointZ_GTC.vz)
 
 LOG_ADD(LOG_UINT32, axy, &setpointZ_GTC.axy)
-LOG_ADD(LOG_INT16, az, &setpointZ_GTC.az)
+LOG_ADD(LOG_INT16,  az, &setpointZ_GTC.az)
 LOG_GROUP_STOP(setpointZ_GTC)
 
 LOG_GROUP_START(miscStatesZ_GTC)
 LOG_ADD(LOG_UINT32, OF_xy, &miscStatesZ_GTC.OF_xy)
-LOG_ADD(LOG_INT16, RREV, &miscStatesZ_GTC.RREV)
+LOG_ADD(LOG_INT16,  RREV, &miscStatesZ_GTC.RREV)
 LOG_ADD(LOG_UINT32, M_xy, &miscStatesZ_GTC.Mxy)
-LOG_ADD(LOG_INT16, M_z, &miscStatesZ_GTC.Mz)
-LOG_ADD(LOG_INT16, F_thrust, &miscStatesZ_GTC.F_thrust)
+LOG_ADD(LOG_UINT32, FM_z, &miscStatesZ_GTC.FMz)
 LOG_GROUP_STOP(miscStatesZ_GTC)
 
 

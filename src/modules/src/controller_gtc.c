@@ -155,6 +155,82 @@ static bool tumbled = false;
 static bool motorstop_flag = false;
 static bool errorReset = false;
 
+// OPTICAL FLOW STATES
+static float RREV = 0.0f; // [1/s]
+static float OF_x = 0.0f; // [rad/s]
+static float OF_y = 0.0f; // [rad/s] 
+static bool flip_flag = false;
+
+static float h_ceiling = 2.50f; // [m]
+
+static uint32_t M1_pwm = 0; 
+static uint32_t M2_pwm = 0; 
+static uint32_t M3_pwm = 0; 
+static uint32_t M4_pwm = 0; 
+
+static float MS1 = 0;
+static float MS2 = 0;
+static float MS3 = 0;
+static float MS4 = 0;
+
+#define limitThrust(VAL) limitUint16(VAL) // Limit PWM value to UINT16_MAX = 65,535
+
+static struct {
+    
+    uint32_t OF_xy; // [milli-rad/s]
+    int16_t RREV;   // [milli-rad/s]
+
+    uint32_t Mxy;   // [N*um]
+    uint32_t FMz;   // [mN | N*um]
+
+    uint32_t MS12; // [rad/s*0.01]
+    uint32_t MS34;
+
+} miscStatesZ_GTC;
+
+static void compressMiscStates(){
+
+    
+    miscStatesZ_GTC.OF_xy = compressXY(OF_x,OF_y);              // [milli-rad/s]
+    miscStatesZ_GTC.RREV = RREV * 1000.0f;                      // [milli-rad/s]
+
+    miscStatesZ_GTC.Mxy = compressXY(M.x*1000.0f,M.y*1000.0f);  // [mN | N*um]
+    miscStatesZ_GTC.FMz = compressXY(F_thrust,M.z*1000.0f);
+
+    miscStatesZ_GTC.MS12 = compressXY(MS1*0.01f,MS2*0.01f);     // [rad/s*0.01]
+    miscStatesZ_GTC.MS34 = compressXY(MS3*0.01f,MS4*0.01f);
+
+}
+
+
+static struct {
+    
+    uint32_t xy;  // Compressed position [mm]
+    int16_t z;
+
+    uint32_t vxy; // Compressed velocities [mm/s]
+    int16_t vz;
+
+    uint32_t axy; // Compress accelerations [mm/s^2]
+    int16_t az;
+
+} setpointZ_GTC;
+
+
+static void compressGTCSetpoint(){
+    setpointZ_GTC.xy = compressXY(x_d.x,x_d.y);
+    setpointZ_GTC.z = x_d.z * 1000.0f;
+
+    setpointZ_GTC.vxy = compressXY(v_d.x,v_d.y);
+    setpointZ_GTC.vz = v_d.z * 1000.0f;
+
+    setpointZ_GTC.axy = compressXY(a_d.x,a_d.y);
+    setpointZ_GTC.az = a_d.z * 1000.0f;
+}
+
+
+
+
 void controllerGTCInit(void)
 {
     controllerGTCTest();
@@ -282,6 +358,10 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
                         state->attitudeQuaternion.y,
                         state->attitudeQuaternion.z,
                         state->attitudeQuaternion.w);
+
+        RREV = stateVel.z/(h_ceiling - statePos.z);
+        OF_x = stateVel.y/(h_ceiling - statePos.z);
+        OF_y = stateVel.x/(h_ceiling - statePos.z);
         
         // EULER ANGLES EXPRESSED IN YZX NOTATION
         stateEul = quat2eul(stateQuat);
@@ -292,7 +372,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         // =========== STATE SETPOINTS =========== //
         // x_d = mkvec(setpoint->position.x,setpoint->position.y,setpoint->position.z);             // Pos-desired [m]
         // v_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);             // Vel-desired [m/s]
-        a_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z); // Acc-desired [m/s^2]
+        // a_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z); // Acc-desired [m/s^2]
 
         omega_d = mkvec(radians(setpoint->attitudeRate.roll),
                         radians(setpoint->attitudeRate.pitch),
@@ -439,10 +519,28 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
             control->yaw = f_yaw_pwm/2;
         }
 
-        if(tick%20 == 0){
-            DEBUG_PRINT("M_z: %.3f | eR.z: %.3f | eRI.z: %.3f \n",M.z*1000,e_R.z,e_RI.z);
+        
+
+        M1_pwm = limitThrust(f_thrust_pwm - f_roll_pwm - f_pitch_pwm - f_yaw_pwm); // Add respective thrust components and limit to (0 <= PWM <= 65,535)
+        M2_pwm = limitThrust(f_thrust_pwm - f_roll_pwm + f_pitch_pwm + f_yaw_pwm);
+        M3_pwm = limitThrust(f_thrust_pwm + f_roll_pwm + f_pitch_pwm - f_yaw_pwm);
+        M4_pwm = limitThrust(f_thrust_pwm + f_roll_pwm - f_pitch_pwm + f_yaw_pwm);
+
+        // Convert PWM to motor speeds (Forster: Eq. 3.4b)
+        MS1 = 0.04077f*M1_pwm + 380.836f;
+        MS2 = 0.04077f*M2_pwm + 380.836f;
+        MS3 = 0.04077f*M3_pwm + 380.836f;
+        MS4 = 0.04077f*M4_pwm + 380.836f;
+
+        
+        compressGTCSetpoint();
+        compressMiscStates();
+
+        // if(tick%20 == 0){
+        //     // DEBUG_PRINT("M_z: %.3f | eR.z: %.3f | eRI.z: %.3f \n",M.z*1000,e_R.z,e_RI.z);
+        //     DEBUG_PRINT("MS1: %.3f| MS2: %.3f | MS3: %.3f | MS4: %.3f \n",MS1,MS2,MS3,MS4);
             
-        }
+        // }
 
     }
 
@@ -482,24 +580,6 @@ PARAM_ADD(PARAM_UINT8, Error_Reset, &errorReset)
 PARAM_ADD(PARAM_UINT8, MotorStop, &motorstop_flag)
 PARAM_GROUP_STOP(GTC_Params)
 
-PARAM_GROUP_START(GTC_Setpoints)
-PARAM_ADD(PARAM_FLOAT, Pos_X, &x_d.x)
-PARAM_ADD(PARAM_FLOAT, Pos_Y, &x_d.y)
-PARAM_ADD(PARAM_FLOAT, Pos_Z, &x_d.z)
-
-PARAM_ADD(PARAM_FLOAT, Vel_X, &v_d.x)
-PARAM_ADD(PARAM_FLOAT, Vel_Y, &v_d.y)
-PARAM_ADD(PARAM_FLOAT, Vel_Z, &v_d.z)
-
-PARAM_ADD(PARAM_FLOAT, Omega_X, &omega_d.x)
-PARAM_ADD(PARAM_FLOAT, Omega_Y, &omega_d.y)
-PARAM_ADD(PARAM_FLOAT, Omega_Z, &omega_d.z)
-
-PARAM_ADD(PARAM_FLOAT, Roll, &eul_d.x)
-PARAM_ADD(PARAM_FLOAT, Pitch, &eul_d.y)
-PARAM_ADD(PARAM_FLOAT, Yaw, &eul_d.z)
-PARAM_GROUP_STOP(GTC_Setpoints)
-
 
 // LOGGING GROUPS
 
@@ -521,23 +601,30 @@ LOG_ADD(LOG_FLOAT, Omega_Y, &stateOmega.y)
 LOG_ADD(LOG_FLOAT, Omega_Z, &stateOmega.z)
 LOG_GROUP_STOP(GTC_State_Est)
 
-LOG_GROUP_START(GTC_Setpoints)
-LOG_ADD(LOG_FLOAT, Pos_X, &x_d.x)
-LOG_ADD(LOG_FLOAT, Pos_Y, &x_d.y)
-LOG_ADD(LOG_FLOAT, Pos_Z, &x_d.z)
+LOG_GROUP_START(setpointZ_GTC)
+LOG_ADD(LOG_UINT32, xy, &setpointZ_GTC.xy)
+LOG_ADD(LOG_INT16,  z, &setpointZ_GTC.z)
 
-LOG_ADD(LOG_FLOAT, Vel_X, &v_d.x)
-LOG_ADD(LOG_FLOAT, Vel_Y, &v_d.y)
-LOG_ADD(LOG_FLOAT, Vel_Z, &v_d.z)
+LOG_ADD(LOG_UINT32, vxy, &setpointZ_GTC.vxy)
+LOG_ADD(LOG_INT16,  vz, &setpointZ_GTC.vz)
 
-LOG_ADD(LOG_FLOAT, Omega_X, &omega_d.x)
-LOG_ADD(LOG_FLOAT, Omega_Y, &omega_d.y)
-LOG_ADD(LOG_FLOAT, Omega_Z, &omega_d.z)
+LOG_ADD(LOG_UINT32, axy, &setpointZ_GTC.axy)
+LOG_ADD(LOG_INT16,  az, &setpointZ_GTC.az)
+LOG_GROUP_STOP(setpointZ_GTC)
 
-LOG_ADD(LOG_FLOAT, Roll, &eul_d.x)
-LOG_ADD(LOG_FLOAT, Pitch, &eul_d.y)
-LOG_ADD(LOG_FLOAT, Yaw, &eul_d.z)
-LOG_GROUP_STOP(GTC_Setpoints)
+LOG_GROUP_START(miscStatesZ_GTC)
+LOG_ADD(LOG_UINT32, OF_xy, &miscStatesZ_GTC.OF_xy)
+LOG_ADD(LOG_INT16,  RREV, &miscStatesZ_GTC.RREV)
+
+LOG_ADD(LOG_UINT32, M_xy, &miscStatesZ_GTC.Mxy)
+LOG_ADD(LOG_UINT32, FM_z, &miscStatesZ_GTC.FMz)
+
+LOG_ADD(LOG_UINT32, MS12, &miscStatesZ_GTC.MS12)
+LOG_ADD(LOG_UINT32, MS34, &miscStatesZ_GTC.MS34)
+
+LOG_ADD(LOG_UINT8, Flip_Flag, &flip_flag)
+LOG_GROUP_STOP(miscStatesZ_GTC)
+
 
 
 

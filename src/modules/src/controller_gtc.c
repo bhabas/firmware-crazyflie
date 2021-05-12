@@ -536,11 +536,11 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         compressGTCSetpoint();
         compressMiscStates();
 
-        if(tick%20 == 0){
-            // DEBUG_PRINT("M_z: %.3f | eR.z: %.3f | eRI.z: %.3f \n",M.z*1000,e_R.z,e_RI.z);
-            DEBUG_PRINT("MS1: %.3f| MS2: %.3f | MS3: %.3f | MS4: %.3f \n",MS1,MS2,MS3,MS4);
+        // if(tick%20 == 0){
+        //     // DEBUG_PRINT("M_z: %.3f | eR.z: %.3f | eRI.z: %.3f \n",M.z*1000,e_R.z,e_RI.z);
+        //     DEBUG_PRINT("MS1: %.3f| MS2: %.3f | MS3: %.3f | MS4: %.3f \n",MS1,MS2,MS3,MS4);
             
-        }
+        // }
 
     }
 

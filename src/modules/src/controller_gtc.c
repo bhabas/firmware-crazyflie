@@ -173,6 +173,14 @@ static float MS2 = 0;
 static float MS3 = 0;
 static float MS4 = 0;
 
+static float s_0 = 0.0f;
+static float v = 0.0f;
+static float a = 0.0f;
+static float t = 0.0f;
+static float T = 0.0f;
+static uint8_t traj_type = 0;
+static bool execute_traj = false;
+
 #define limitThrust(VAL) limitUint16(VAL) // Limit PWM value to UINT16_MAX = 65,535
 
 static struct {
@@ -293,7 +301,10 @@ void GTC_Command(setpoint_t *setpoint)
             P_kd_flag.z = setpoint->cmd_val3;
             break;
 
-        case 3: // Attitude
+        case 3: // Acceleration
+            a_d.x = setpoint->cmd_val1;
+            a_d.y = setpoint->cmd_val2;
+            a_d.z = setpoint->cmd_val3;
             break;
 
         case 4: // Tumble-Detection
@@ -311,12 +322,59 @@ void GTC_Command(setpoint_t *setpoint)
         case 8: // Arm Policy Maneuver
 
             break;
+        case 9: // Trajectory Values
+
+            s_0 = setpoint->cmd_val1;
+            v = setpoint->cmd_val2;
+            a = setpoint->cmd_val3;
+            traj_type = setpoint->cmd_flag;
+
+            t = 0.0f; // Reset t
+            T = (a+fsqr(v))/(a*v); // Find trajectory manuever length [s]
+
+            if(traj_type >= 0){
+                execute_traj = true;
+            }
+            else{
+                execute_traj = false;
+            }
+
+            
+            break;
 
     }
     
     return 0;
 }
 
+void controllerGTCTraj()
+{
+    if(t<=v/a)
+    {
+        x_d.z = 1/2*a*fsqr(t);
+        v_d.z = a*t;
+        a_d.z = a;
+    }
+
+    else if(v/a < t && t <= (T-v/a) )
+    {
+        x_d.z = v*t - fsqr(v)/(2*a);
+        v_d.z = v;
+        a_d.z = 0.0f;
+    }
+
+    else if((T-v/a) < t && t <= T)
+    {
+        x_d.z = (2*a*v*t-2*fsqr(v)-fsqr(a)*fsqr(t-T))/(2*a);
+        v_d.z = a*(T-t);
+        a_d.z = -a;
+    }
+
+    t = t + dt;
+    
+
+    
+}
 
 void controllerGTC(control_t *control, setpoint_t *setpoint,
                                          const sensorData_t *sensors,
@@ -336,6 +394,10 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         }
 
     if (RATE_DO_EXECUTE(RATE_500_HZ, tick)) {
+
+        if(execute_traj){
+            controllerGTCTraj();
+        }
 
         // SYSTEM PARAMETERS 
         J = mdiag(1.65717e-5f, 1.66556e-5f, 2.92617e-5f); // Rotational Inertia of CF [kg m^2]

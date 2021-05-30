@@ -339,7 +339,6 @@ void GTC_Command(setpoint_t *setpoint)
                 execute_traj = false;
             }
 
-            
             break;
 
     }
@@ -351,23 +350,26 @@ void controllerGTCTraj()
 {
     if(t<=v/a)
     {
-        x_d.z = 1/2*a*fsqr(t);
+        x_d.z = 0.5f*a*t*t + s_0;
         v_d.z = a*t;
         a_d.z = a;
+
     }
 
     else if(v/a < t && t <= (T-v/a) )
     {
-        x_d.z = v*t - fsqr(v)/(2*a);
+        x_d.z = v*t - fsqr(v)/(2.0f*a) + s_0;
         v_d.z = v;
         a_d.z = 0.0f;
+
     }
 
     else if((T-v/a) < t && t <= T)
     {
-        x_d.z = (2*a*v*t-2*fsqr(v)-fsqr(a)*fsqr(t-T))/(2*a);
+        x_d.z = (2.0f*a*v*T-2.0f*fsqr(v)-fsqr(a)*fsqr(t-T))/(2.0f*a) + s_0;
         v_d.z = a*(T-t);
         a_d.z = -a;
+
     }
 
     t = t + dt;

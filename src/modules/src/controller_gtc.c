@@ -1,111 +1,6 @@
-// STANDARD LIBRARIES
-#include <math.h>
-#include <stdio.h>
-#include <stdint.h>
-
-// CF LIBARARIES
-#include "math3d.h"
-#include "log.h"
-#include "param.h"
-#include "debug.h"
-
 // CF HEADERS
 #include "controller_gtc.h"
-#include "stabilizer.h"
-#include "stabilizer_types.h"
-#include "physicalConstants.h"
 
-// SYSTEM PARAMETERS
-static float m = 0.030; // [g]
-static float g = GRAVITY_MAGNITUDE;
-struct mat33 J; // Rotational Inertia Matrix [kg*m^2]
-
-static float d = 0.040f;    // COM to Prop [m]
-static float dp = 0.028284; // COM to Prop along x-axis [m]
-                            // [dp = d*sin(45 deg)]
-
-static float const kf = 2.2e-8f;    // Thrust Coeff [N/(rad/s)^2]
-static float const c_tf = 0.00618f;  // Moment Coeff [Nm/N]
-
-
-// LOGGING VARIABLES
-static float cmd_thrust;
-static float cmd_roll;
-static float cmd_pitch;
-static float cmd_yaw;
-
-// STATE ERRORS
-static struct vec e_x;  // Pos-error [m]
-static struct vec e_v;  // Vel-error [m/s]
-static struct vec e_PI;  // Pos. Integral-error [m*s]
-
-static struct vec e_R;  // Rotation-error [rad]
-static struct vec e_w;  // Omega-error [rad/s]
-static struct vec e_RI; // Rot. Integral-error [rad*s]
-
-// STATE VALUES
-static struct vec statePos = {0.0f,0.0f,0.0f};         // Pos [m]
-static struct vec stateVel = {0.0f,0.0f,0.0f};         // Vel [m/s]
-static struct quat stateQuat = {0.0f,0.0f,0.0f,1.0f};  // Orientation
-static struct vec stateOmega = {0.0f,0.0f,0.0f};       // Angular Rate [rad/s]
-
-static struct mat33 R; // Orientation as rotation matrix
-static struct vec stateEul = {0.0f,0.0f,0.0f}; // Pose in Euler Angles [YZX Notation]
-
-// DESIRED STATES
-static struct vec x_d = {0.0f,0.0f,0.0f}; // Pos-desired [m]
-static struct vec v_d = {0.0f,0.0f,0.0f}; // Vel-desired [m/s]
-static struct vec a_d = {0.0f,0.0f,0.0f}; // Acc-desired [m/s^2]
-
-static struct quat quat_d = {0.0f,0.0f,0.0f,1.0f}; // Orientation-desired [qx,qy,qz,qw]
-static struct vec eul_d = {0.0f,0.0f,0.0f};        // Euler Angle-desired [rad? deg? TBD]
-static struct vec omega_d = {0.0f,0.0f,0.0f};      // Omega-desired [rad/s]
-static struct vec domega_d = {0.0f,0.0f,0.0f};     // Ang. Acc-desired [rad/s^2]
-
-static struct vec b1_d = {1.0f,0.0f,0.0f};    // Desired body x-axis in global coord. [x,y,z]
-static struct vec b2_d;    // Desired body y-axis in global coord.
-static struct vec b3_d;    // Desired body z-axis in global coord.
-static struct vec b3;      // Current body z-axis in global coord.
-
-static struct mat33 R_d;   // Desired rotational matrix from b_d vectors
-
-static struct vec e_3 = {0.0f, 0.0f, 1.0f}; // Global z-axis
-
-static struct vec F_thrust_ideal;   // Ideal thrust vector
-static float F_thrust = 0.0f;              // Desired body thrust [N]
-static float F_thrust_max = 0.64f;          // Max possible body thrust [N}]
-static struct vec M;                // Desired body moments [Nm]
-
-
-// TEMPORARY CALC VECS/MATRICES
-static struct vec temp1_v; 
-static struct vec temp2_v;
-static struct vec temp3_v;
-static struct vec temp4_v;
-static struct mat33 temp1_m;  
-
-static struct vec P_effort;
-static struct vec R_effort;
-
-static struct mat33 RdT_R; // Rd' * R
-static struct mat33 RT_Rd; // R' * Rd
-static struct vec Gyro_dyn;
-
-
-
-
-
-
-// MOTOR THRUSTS
-static float f_thrust; // Motor thrust - Thrust [N]
-static float f_roll;   // Motor thrust - Roll   [N]
-static float f_pitch;  // Motor thrust - Pitch  [N]
-static float f_yaw;    // Motor thrust - Yaw    [N]
-
-static int32_t f_thrust_pwm; 
-static int32_t f_roll_pwm;   
-static int32_t f_pitch_pwm; 
-static int32_t f_yaw_pwm;  
 
 // XY POSITION PID
 static float P_kp_xy = 0.4f;
@@ -138,98 +33,6 @@ static float R_kp_flag = 1.0f;
 static float R_kd_flag = 1.0f;
 
 
-// INIT CTRL GAIN VECTORS
-static struct vec Kp_p; // Pos. Proportional Gains
-static struct vec Kd_p; // Pos. Derivative Gains
-static struct vec Ki_p; // Pos. Integral Gains  
-
-static struct vec Kp_R; // Rot. Proportional Gains
-static struct vec Kd_R; // Rot. Derivative Gains
-static struct vec Ki_R; // Rot. Integral Gains
-
-static float dt = (float)(1.0f/RATE_500_HZ);
-
-// CONTROLLER PARAMETERS
-static bool attCtrlEnable = false;
-static bool tumbled = false;
-static bool motorstop_flag = false;
-static bool errorReset = false;
-
-// OPTICAL FLOW STATES
-static float RREV = 0.0f; // [1/s]
-static float OF_x = 0.0f; // [rad/s]
-static float OF_y = 0.0f; // [rad/s] 
-static bool flip_flag = false;
-
-static float h_ceiling = 2.50f; // [m]
-
-static uint32_t M1_pwm = 0; 
-static uint32_t M2_pwm = 0; 
-static uint32_t M3_pwm = 0; 
-static uint32_t M4_pwm = 0; 
-
-static float MS1 = 0;
-static float MS2 = 0;
-static float MS3 = 0;
-static float MS4 = 0;
-
-#define limitThrust(VAL) limitUint16(VAL) // Limit PWM value to UINT16_MAX = 65,535
-
-static struct {
-    
-    uint32_t OF_xy; // [milli-rad/s]
-    int16_t RREV;   // [milli-rad/s]
-
-    uint32_t Mxy;   // [N*um]
-    uint32_t FMz;   // [mN | N*um]
-
-    uint32_t MS12; // [rad/s*0.01]
-    uint32_t MS34;
-
-} miscStatesZ_GTC;
-
-static void compressMiscStates(){
-
-    
-    miscStatesZ_GTC.OF_xy = compressXY(OF_x,OF_y);              // [milli-rad/s]
-    miscStatesZ_GTC.RREV = RREV * 1000.0f;                      // [milli-rad/s]
-
-    miscStatesZ_GTC.Mxy = compressXY(M.x*1000.0f,M.y*1000.0f);  // [mN | N*um]
-    miscStatesZ_GTC.FMz = compressXY(F_thrust,M.z*1000.0f);
-
-    miscStatesZ_GTC.MS12 = compressXY(MS1*0.01f,MS2*0.01f);     // [rad/s*0.01]
-    miscStatesZ_GTC.MS34 = compressXY(MS3*0.01f,MS4*0.01f);
-
-}
-
-
-static struct {
-    
-    uint32_t xy;  // Compressed position [mm]
-    int16_t z;
-
-    uint32_t vxy; // Compressed velocities [mm/s]
-    int16_t vz;
-
-    uint32_t axy; // Compress accelerations [mm/s^2]
-    int16_t az;
-
-} setpointZ_GTC;
-
-
-static void compressGTCSetpoint(){
-    setpointZ_GTC.xy = compressXY(x_d.x,x_d.y);
-    setpointZ_GTC.z = x_d.z * 1000.0f;
-
-    setpointZ_GTC.vxy = compressXY(v_d.x,v_d.y);
-    setpointZ_GTC.vz = v_d.z * 1000.0f;
-
-    setpointZ_GTC.axy = compressXY(a_d.x,a_d.y);
-    setpointZ_GTC.az = a_d.z * 1000.0f;
-}
-
-
-
 
 void controllerGTCInit(void)
 {
@@ -258,13 +61,14 @@ void GTC_Command(setpoint_t *setpoint)
   
             x_d = mkvec(0.0f,0.0f,0.0f);
             v_d = mkvec(0.0f,0.0f,0.0f);
+            a_d = mkvec(0.0f,0.0f,0.0f);
             
-            P_kp_flag = mkvec(1.0f,1.0f,1.0f); // Turn on all control flags
-            P_kd_flag = mkvec(1.0f,1.0f,1.0f);
-
 
             R_kp_flag = 1.0f;
             R_kd_flag = 1.0f;
+
+            t = 0;
+            execute_traj = false;
 
             break;
 
@@ -274,12 +78,6 @@ void GTC_Command(setpoint_t *setpoint)
             x_d.z = setpoint->cmd_val3;
             break;
 
-        case 11: // Position Ctrl Flags
-            P_kp_flag.x = setpoint->cmd_val1;
-            P_kp_flag.y = setpoint->cmd_val2;
-            P_kp_flag.z = setpoint->cmd_val3;
-
-            break;
 
         case 2: // Velocity
             v_d.x = setpoint->cmd_val1;
@@ -287,13 +85,11 @@ void GTC_Command(setpoint_t *setpoint)
             v_d.z = setpoint->cmd_val3;
             break;
 
-        case 22: // Velocity Ctrl Flags
-            P_kd_flag.x = setpoint->cmd_val1;
-            P_kd_flag.y = setpoint->cmd_val2;
-            P_kd_flag.z = setpoint->cmd_val3;
-            break;
 
-        case 3: // Attitude
+        case 3: // Acceleration
+            a_d.x = setpoint->cmd_val1;
+            a_d.y = setpoint->cmd_val2;
+            a_d.z = setpoint->cmd_val3;
             break;
 
         case 4: // Tumble-Detection
@@ -311,31 +107,84 @@ void GTC_Command(setpoint_t *setpoint)
         case 8: // Arm Policy Maneuver
 
             break;
+        case 9: // Trajectory Values
+
+            s_0 = setpoint->cmd_val1;
+            v = setpoint->cmd_val2;
+            a = setpoint->cmd_val3;
+            traj_type = setpoint->cmd_flag;
+
+            t = 0.0f; // Reset t
+            T = (a+fsqr(v))/(a*v); // Find trajectory manuever length [s]
+
+            if(traj_type >= 0){
+                execute_traj = true;
+            }
+            else{
+                execute_traj = false;
+            }
+
+            break;
 
     }
     
     return 0;
 }
 
+void controllerGTCTraj()
+{
+    if(t<=v/a)
+    {
+        x_d.z = 0.5f*a*t*t + s_0;
+        v_d.z = a*t;
+        a_d.z = a;
+
+    }
+
+    else if(v/a < t)
+    {
+        x_d.z = v*t - fsqr(v)/(2.0f*a) + s_0;
+        v_d.z = v;
+        a_d.z = 0.0f;
+
+    }
+
+    // else if((T-v/a) < t && t <= T)
+    // {
+    //     x_d.z = (2.0f*a*v*T-2.0f*fsqr(v)-fsqr(a)*fsqr(t-T))/(2.0f*a) + s_0;
+    //     v_d.z = a*(T-t);
+    //     a_d.z = -a;
+
+    // }
+
+    t = t + dt;
+    
+
+    
+}
 
 void controllerGTC(control_t *control, setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
                                          const uint32_t tick)
 {
-    if (setpoint->GTC_cmd_rec == true)
-        {
-            
-            GTC_Command(setpoint);
-            setpoint->GTC_cmd_rec = false;
-        }
-
-    if (errorReset){
-        controllerGTCReset();
-        errorReset = false;
-        }
-
     if (RATE_DO_EXECUTE(RATE_500_HZ, tick)) {
+
+        if (setpoint->GTC_cmd_rec == true)
+            {
+                
+                GTC_Command(setpoint);
+                setpoint->GTC_cmd_rec = false;
+            }
+
+        if (errorReset){
+            controllerGTCReset();
+            errorReset = false;
+            }
+
+        if(execute_traj){
+            controllerGTCTraj();
+        }
 
         // SYSTEM PARAMETERS 
         J = mdiag(1.65717e-5f, 1.66556e-5f, 2.92617e-5f); // Rotational Inertia of CF [kg m^2]
@@ -415,9 +264,9 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
 
 
         /* [F_thrust_ideal = -kp_x*e_x*(kp_x_flag) + -kd_x*e_v + -kI_x*e_PI*(kp_x_flag) + m*g*e_3 + m*a_d] */
-        temp1_v = veltmul(P_kp_flag,veltmul(vneg(Kp_p), e_x));
-        temp2_v = veltmul(P_kd_flag,veltmul(vneg(Kd_p), e_v));
-        temp3_v = veltmul(P_kp_flag,veltmul(vneg(Ki_p), e_PI));
+        temp1_v = veltmul(vneg(Kp_p), e_x);
+        temp2_v = veltmul(vneg(Kd_p), e_v);
+        temp3_v = veltmul(vneg(Ki_p), e_PI);
         P_effort = vadd3(temp1_v,temp2_v,temp3_v);
 
         temp1_v = vscl(m*g, e_3); // Feed-forward term

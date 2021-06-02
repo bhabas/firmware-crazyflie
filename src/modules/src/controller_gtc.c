@@ -70,6 +70,9 @@ void GTC_Command(setpoint_t *setpoint)
             R_kp_flag = 1.0f;
             R_kd_flag = 1.0f;
 
+            t = 0;
+            execute_traj = false;
+
             break;
 
         case 1: // Position
@@ -152,7 +155,7 @@ void controllerGTCTraj()
 
     }
 
-    else if(v/a < t && t <= (T-v/a) )
+    else if(v/a < t)
     {
         x_d.z = v*t - fsqr(v)/(2.0f*a) + s_0;
         v_d.z = v;
@@ -160,13 +163,13 @@ void controllerGTCTraj()
 
     }
 
-    else if((T-v/a) < t && t <= T)
-    {
-        x_d.z = (2.0f*a*v*T-2.0f*fsqr(v)-fsqr(a)*fsqr(t-T))/(2.0f*a) + s_0;
-        v_d.z = a*(T-t);
-        a_d.z = -a;
+    // else if((T-v/a) < t && t <= T)
+    // {
+    //     x_d.z = (2.0f*a*v*T-2.0f*fsqr(v)-fsqr(a)*fsqr(t-T))/(2.0f*a) + s_0;
+    //     v_d.z = a*(T-t);
+    //     a_d.z = -a;
 
-    }
+    // }
 
     t = t + dt;
     

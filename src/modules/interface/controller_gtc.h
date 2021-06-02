@@ -94,12 +94,18 @@ static struct vec b3;      // Current body z-axis in global coord.
 
 static struct mat33 R_d;   // Desired rotational matrix from b_d vectors
 
+
+
+
+
 static struct vec e_3 = {0.0f, 0.0f, 1.0f}; // Global z-axis
 
-static struct vec F_thrust_ideal;   // Ideal thrust vector
-static float F_thrust = 0.0f;              // Desired body thrust [N]
+static struct vec F_thrust_ideal;           // Ideal thrust vector
+static float F_thrust = 0.0f;               // Desired body thrust [N]
 static float F_thrust_max = 0.64f;          // Max possible body thrust [N}]
-static struct vec M;                // Desired body moments [Nm]
+static struct vec M;                        // Desired body moments [Nm]
+static struct vec M_d = {0.0f,0.0f,0.0f};   // Desired moment [N*mm]
+static float Moment_flag = false;
 
 
 // TEMPORARY CALC VECS/MATRICES

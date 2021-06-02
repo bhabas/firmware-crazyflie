@@ -26,11 +26,6 @@ static float R_kd_z = 5e-5f;
 static float R_ki_z = 3e-5f;
 static float i_range_R_z = 0.05f;
 
-// CTRL FLAGS
-static struct vec P_kp_flag = {1.0f,1.0f,1.0f};
-static struct vec P_kd_flag = {1.0f,1.0f,1.0f};
-static float R_kp_flag = 1.0f;
-static float R_kd_flag = 1.0f;
 
 
 
@@ -64,8 +59,7 @@ void GTC_Command(setpoint_t *setpoint)
             a_d = mkvec(0.0f,0.0f,0.0f);
             
 
-            R_kp_flag = 1.0f;
-            R_kd_flag = 1.0f;
+            Moment_flag = false;
 
             t = 0;
             execute_traj = false;
@@ -102,9 +96,15 @@ void GTC_Command(setpoint_t *setpoint)
 
         case 7: // Execute Moment-Based Flip
 
+            M_d.x = setpoint->cmd_val1*1e-3;
+            M_d.y = setpoint->cmd_val2*1e-3;
+            M_d.z = setpoint->cmd_val3*1e-3;
+
+            Moment_flag = setpoint->cmd_flag;
             break;
 
         case 8: // Arm Policy Maneuver
+
 
             break;
         case 9: // Trajectory Values
@@ -332,6 +332,11 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
             F_thrust = vdot(F_thrust_ideal, b3);    // Project ideal thrust onto b3 vector [N]
             F_thrust = clamp(F_thrust,0.0f,F_thrust_max*0.8f);
             M = vadd(R_effort,Gyro_dyn);            // Control moments [Nm]
+
+            if(Moment_flag){
+                F_thrust = F_thrust;
+                M = M_d;
+            }
         }
 
         if(tumbled){

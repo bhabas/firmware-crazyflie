@@ -63,9 +63,6 @@ void GTC_Command(setpoint_t *setpoint)
             v_d = mkvec(0.0f,0.0f,0.0f);
             a_d = mkvec(0.0f,0.0f,0.0f);
             
-            P_kp_flag = mkvec(1.0f,1.0f,1.0f); // Turn on all control flags
-            P_kd_flag = mkvec(1.0f,1.0f,1.0f);
-
 
             R_kp_flag = 1.0f;
             R_kd_flag = 1.0f;
@@ -81,12 +78,6 @@ void GTC_Command(setpoint_t *setpoint)
             x_d.z = setpoint->cmd_val3;
             break;
 
-        case 11: // Position Ctrl Flags
-            P_kp_flag.x = setpoint->cmd_val1;
-            P_kp_flag.y = setpoint->cmd_val2;
-            P_kp_flag.z = setpoint->cmd_val3;
-
-            break;
 
         case 2: // Velocity
             v_d.x = setpoint->cmd_val1;
@@ -94,11 +85,6 @@ void GTC_Command(setpoint_t *setpoint)
             v_d.z = setpoint->cmd_val3;
             break;
 
-        case 22: // Velocity Ctrl Flags
-            P_kd_flag.x = setpoint->cmd_val1;
-            P_kd_flag.y = setpoint->cmd_val2;
-            P_kd_flag.z = setpoint->cmd_val3;
-            break;
 
         case 3: // Acceleration
             a_d.x = setpoint->cmd_val1;
@@ -278,9 +264,9 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
 
 
         /* [F_thrust_ideal = -kp_x*e_x*(kp_x_flag) + -kd_x*e_v + -kI_x*e_PI*(kp_x_flag) + m*g*e_3 + m*a_d] */
-        temp1_v = veltmul(P_kp_flag,veltmul(vneg(Kp_p), e_x));
-        temp2_v = veltmul(P_kd_flag,veltmul(vneg(Kd_p), e_v));
-        temp3_v = veltmul(P_kp_flag,veltmul(vneg(Ki_p), e_PI));
+        temp1_v = veltmul(vneg(Kp_p), e_x);
+        temp2_v = veltmul(vneg(Kd_p), e_v);
+        temp3_v = veltmul(vneg(Ki_p), e_PI);
         P_effort = vadd3(temp1_v,temp2_v,temp3_v);
 
         temp1_v = vscl(m*g, e_3); // Feed-forward term

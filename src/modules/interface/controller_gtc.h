@@ -154,10 +154,18 @@ static bool motorstop_flag = false;
 static bool errorReset = false;
 
 // OPTICAL FLOW STATES
-static float RREV = 0.0f; // [1/s]
+static float RREV = 0.0f; // [rad/s]
 static float OF_x = 0.0f; // [rad/s]
 static float OF_y = 0.0f; // [rad/s] 
 static bool flip_flag = false;
+
+
+// POLICY VARIABLES
+static float RREV_thr = 0.0f;
+static float G1 = 0.0f;
+static float G2 = 0.0f;
+
+static bool policy_armed_flag = false;
 
 
 // MOTOR VARIABLES

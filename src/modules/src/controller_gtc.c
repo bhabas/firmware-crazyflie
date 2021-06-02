@@ -60,6 +60,8 @@ void GTC_Command(setpoint_t *setpoint)
             
 
             Moment_flag = false;
+            policy_armed_flag = false;
+            flip_flag = false;
 
             t = 0;
             execute_traj = false;
@@ -104,7 +106,11 @@ void GTC_Command(setpoint_t *setpoint)
             break;
 
         case 8: // Arm Policy Maneuver
+            RREV_thr = setpoint->cmd_val1;
+            G1 = setpoint->cmd_val2;
+            G2 = setpoint->cmd_val3;
 
+            policy_armed_flag = setpoint->cmd_flag;
 
             break;
         case 9: // Trajectory Values
@@ -326,26 +332,48 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         temp4_v = mvmul(J, vsub(temp2_v, temp3_v)); // J*(hat(omega)*R.transpose()*R_d*omega_d - R.transpose()*R_d*domega_d)
         Gyro_dyn = vsub(temp1_v,temp4_v);
 
+        F_thrust = vdot(F_thrust_ideal, b3);    // Project ideal thrust onto b3 vector [N]
+        F_thrust = clamp(F_thrust,0.0f,F_thrust_max*0.8f);
+        M = vadd(R_effort,Gyro_dyn);            // Control moments [Nm]
 
         // =========== THRUST AND MOMENTS [FORCE NOTATION] =========== // 
         if(!tumbled){
-            F_thrust = vdot(F_thrust_ideal, b3);    // Project ideal thrust onto b3 vector [N]
-            F_thrust = clamp(F_thrust,0.0f,F_thrust_max*0.8f);
-            M = vadd(R_effort,Gyro_dyn);            // Control moments [Nm]
+            
+            if(policy_armed_flag == true){
+                
+                if(RREV >= RREV_thr && flip_flag == false){
 
-            if(Moment_flag){
+                    flip_flag = true;
+
+                }
+
+                if(flip_flag == true){
+                    M_d.x = 0.0f;
+                    M_d.y = -G1*1e-3;
+                    M_d.z = 0.0f;
+
+                    M = vscl(2.0f,M_d); // Need to double moment to ensure it survives the MS<0 cutoff
+                    F_thrust = 0.0f;
+
+                }
+            }
+            else{
                 F_thrust = F_thrust;
-                M = M_d;
+                M = M;
             }
         }
-
-        if(tumbled){
+        else if(tumbled){
             // consolePrintf("System Tumbled: \n");
             F_thrust = 0.0f;
             M.x = 0.0f;
             M.y = 0.0f;
             M.z = 0.0f;
         }
+
+
+
+
+
 
         // =========== CONVERT THRUSTS AND MOMENTS TO PWM =========== // 
         f_thrust = F_thrust/4.0f;
@@ -390,11 +418,11 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         compressGTCSetpoint();
         compressMiscStates();
 
-        // if(tick%20 == 0){
-        //     // DEBUG_PRINT("M_z: %.3f | eR.z: %.3f | eRI.z: %.3f \n",M.z*1000,e_R.z,e_RI.z);
-        //     DEBUG_PRINT("MS1: %.3f| MS2: %.3f | MS3: %.3f | MS4: %.3f \n",MS1,MS2,MS3,MS4);
+        if(tick%20 == 0){
+            DEBUG_PRINT("Flip_Flag: %.3f \n",(float)flip_flag);
             
-        // }
+            
+        }
 
     }
 

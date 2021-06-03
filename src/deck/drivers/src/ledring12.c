@@ -1070,19 +1070,19 @@ static bool handleTimingmemWrite(const uint32_t memAddr, const uint8_t writeLen,
   return result;
 }
 
-PARAM_GROUP_START(ring)
-PARAM_ADD(PARAM_UINT8, effect, &effect)
-PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, neffect, &neffect)
-PARAM_ADD(PARAM_UINT8, solidRed, &solidRed)
-PARAM_ADD(PARAM_UINT8, solidGreen, &solidGreen)
-PARAM_ADD(PARAM_UINT8, solidBlue, &solidBlue)
-PARAM_ADD(PARAM_UINT8, headlightEnable, &headlightEnable)
-PARAM_ADD(PARAM_FLOAT, glowstep, &glowstep)
-PARAM_ADD(PARAM_FLOAT, emptyCharge, &emptyCharge)
-PARAM_ADD(PARAM_FLOAT, fullCharge, &fullCharge)
-PARAM_ADD(PARAM_UINT32, fadeColor, &fadeColor)
-PARAM_ADD(PARAM_FLOAT, fadeTime, &fadeTime)
-PARAM_GROUP_STOP(ring)
+// PARAM_GROUP_START(ring)
+// PARAM_ADD(PARAM_UINT8, effect, &effect)
+// PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, neffect, &neffect)
+// PARAM_ADD(PARAM_UINT8, solidRed, &solidRed)
+// PARAM_ADD(PARAM_UINT8, solidGreen, &solidGreen)
+// PARAM_ADD(PARAM_UINT8, solidBlue, &solidBlue)
+// PARAM_ADD(PARAM_UINT8, headlightEnable, &headlightEnable)
+// PARAM_ADD(PARAM_FLOAT, glowstep, &glowstep)
+// PARAM_ADD(PARAM_FLOAT, emptyCharge, &emptyCharge)
+// PARAM_ADD(PARAM_FLOAT, fullCharge, &fullCharge)
+// PARAM_ADD(PARAM_UINT32, fadeColor, &fadeColor)
+// PARAM_ADD(PARAM_FLOAT, fadeTime, &fadeTime)
+// PARAM_GROUP_STOP(ring)
 
 static const DeckDriver ledring12_deck = {
   .vid = 0xBC,

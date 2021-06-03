@@ -815,7 +815,7 @@ bool crtpCommanderHighLevelIsTrajectoryFinished() {
   return plan_is_finished(&planner, t);
 }
 
-PARAM_GROUP_START(hlCommander)
-PARAM_ADD(PARAM_FLOAT, vtoff, &defaultTakeoffVelocity)
-PARAM_ADD(PARAM_FLOAT, vland, &defaultLandingVelocity)
-PARAM_GROUP_STOP(hlCommander)
+// PARAM_GROUP_START(hlCommander)
+// PARAM_ADD(PARAM_FLOAT, vtoff, &defaultTakeoffVelocity)
+// PARAM_ADD(PARAM_FLOAT, vland, &defaultLandingVelocity)
+// PARAM_GROUP_STOP(hlCommander)

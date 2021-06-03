@@ -71,6 +71,7 @@ enum packet_type {
   hoverType         = 5,
   fullStateType     = 6,
   positionType      = 7,
+  GTCType           = 9,
 };
 
 /* ---===== 2 - Decoding functions =====--- */
@@ -296,6 +297,31 @@ static void hoverDecoder(setpoint_t *setpoint, uint8_t type, const void *data, s
   setpoint->velocity_body = true;
 }
 
+// DEFINE STRUCT MATCHING INCOMING GTC CMD STRUCT
+struct GTCPacket_s {
+
+  uint16_t cmd_type;
+  float cmd_val1;
+  float cmd_val2;
+  float cmd_val3;
+  float cmd_flag;
+
+} __attribute__((packed));
+
+// DECODE CRTP SETPOINT PACKET INTO FIRMWARE'S [setpoint_t] STRUCT
+static void GTCDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
+{
+  const struct GTCPacket_s *values = data;
+
+  setpoint->cmd_type = values->cmd_type;
+  setpoint->cmd_val1 = values->cmd_val1;
+  setpoint->cmd_val2 = values->cmd_val2;
+  setpoint->cmd_val3 = values->cmd_val3;
+  setpoint->cmd_flag = values->cmd_flag;
+
+  setpoint->GTC_cmd_rec = true;
+}
+
 struct fullStatePacket_s {
   int16_t x;         // position - mm
   int16_t y;
@@ -377,6 +403,7 @@ const static packetDecoder_t packetDecoders[] = {
   [hoverType]         = hoverDecoder,
   [fullStateType]     = fullStateDecoder,
   [positionType]      = positionDecoder,
+  [GTCType]           = GTCDecoder,
 };
 
 /* Decoder switch */
@@ -402,10 +429,10 @@ void crtpCommanderGenericDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
 // Params for generic CRTP handlers
 
 // CPPM Emulation commander
-PARAM_GROUP_START(cmdrCPPM)
-PARAM_ADD(PARAM_FLOAT, rateRoll, &s_CppmEmuRollMaxRateDps)
-PARAM_ADD(PARAM_FLOAT, ratePitch, &s_CppmEmuPitchMaxRateDps)
-PARAM_ADD(PARAM_FLOAT, rateYaw, &s_CppmEmuYawMaxRateDps)
-PARAM_ADD(PARAM_FLOAT, angRoll, &s_CppmEmuRollMaxAngleDeg)
-PARAM_ADD(PARAM_FLOAT, angPitch, &s_CppmEmuPitchMaxAngleDeg)
-PARAM_GROUP_STOP(cmdrCPPM)
+// PARAM_GROUP_START(cmdrCPPM)
+// PARAM_ADD(PARAM_FLOAT, rateRoll, &s_CppmEmuRollMaxRateDps)
+// PARAM_ADD(PARAM_FLOAT, ratePitch, &s_CppmEmuPitchMaxRateDps)
+// PARAM_ADD(PARAM_FLOAT, rateYaw, &s_CppmEmuYawMaxRateDps)
+// PARAM_ADD(PARAM_FLOAT, angRoll, &s_CppmEmuRollMaxAngleDeg)
+// PARAM_ADD(PARAM_FLOAT, angPitch, &s_CppmEmuPitchMaxAngleDeg)
+// PARAM_GROUP_STOP(cmdrCPPM)

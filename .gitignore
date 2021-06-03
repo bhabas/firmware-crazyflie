@@ -10,7 +10,7 @@ bin/*
 *.o
 *.o.d
 *~
-tools/make/config.mk
+# tools/make/config.mk
 cflie.*
 version.c
 tags

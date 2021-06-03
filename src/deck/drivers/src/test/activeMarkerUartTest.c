@@ -97,9 +97,9 @@ static const DeckDriver deckDriver = {
 DECK_DRIVER(deckDriver);
 
 
-PARAM_GROUP_START(amarkUartTest)
-PARAM_ADD(PARAM_UINT8, trigger, &trigger)
-PARAM_GROUP_STOP(amarkUartTest)
+// PARAM_GROUP_START(amarkUartTest)
+// PARAM_ADD(PARAM_UINT8, trigger, &trigger)
+// PARAM_GROUP_STOP(amarkUartTest)
 
 LOG_GROUP_START(amarkUartTest)
 LOG_ADD(LOG_UINT8, passed, &passed)

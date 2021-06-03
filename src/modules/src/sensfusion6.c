@@ -327,12 +327,12 @@ LOG_GROUP_START(sensfusion6)
   LOG_ADD(LOG_UINT8, isCalibrated, &isCalibrated)
 LOG_GROUP_STOP(sensfusion6)
 
-PARAM_GROUP_START(sensfusion6)
-#ifdef MADWICK_QUATERNION_IMU
-PARAM_ADD(PARAM_FLOAT, beta, &beta)
-#else // MAHONY_QUATERNION_IMU
-PARAM_ADD(PARAM_FLOAT, kp, &twoKp)
-PARAM_ADD(PARAM_FLOAT, ki, &twoKi)
-#endif
-PARAM_ADD(PARAM_FLOAT, baseZacc, &baseZacc)
-PARAM_GROUP_STOP(sensfusion6)
+// PARAM_GROUP_START(sensfusion6)
+// #ifdef MADWICK_QUATERNION_IMU
+// PARAM_ADD(PARAM_FLOAT, beta, &beta)
+// #else // MAHONY_QUATERNION_IMU
+// PARAM_ADD(PARAM_FLOAT, kp, &twoKp)
+// PARAM_ADD(PARAM_FLOAT, ki, &twoKi)
+// #endif
+// PARAM_ADD(PARAM_FLOAT, baseZacc, &baseZacc)
+// PARAM_GROUP_STOP(sensfusion6)

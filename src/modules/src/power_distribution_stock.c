@@ -34,8 +34,12 @@
 #include "platform.h"
 #include "motors.h"
 #include "debug.h"
+#include "controller.h"
 
 static bool motorSetEnable = false;
+static bool safeModeEnable = true;
+
+static float MS1,MS2,MS3,MS4; // Motorspeeds [rad/s]
 
 static struct {
   uint32_t m1;
@@ -71,7 +75,7 @@ bool powerDistributionTest(void)
   return pass;
 }
 
-#define limitThrust(VAL) limitUint16(VAL)
+#define limitThrust(VAL) limitUint16(VAL) // Limit PWM value to UINT16_MAX = 65,535
 
 void powerStop()
 {
@@ -83,23 +87,36 @@ void powerStop()
 
 void powerDistribution(const control_t *control)
 {
-  #ifdef QUAD_FORMATION_X // Not sure where this is defined
+  
+
+  if (getControllerType() == ControllerTypeGTC)
+  {
+    // Note: control struct has int16_t datatype with PWM limit of 32,767 for roll, pitch, and yaw. 
+    // So values are compressed in half in GTC and re-expanded here to preserve values greater than 32,767
+    int32_t r = (control->roll)*2; 
+    int32_t p = (control->pitch)*2;
+    int32_t y = (control->yaw)*2;
+
+    motorPower.m1 = limitThrust(control->thrust - r - p - y); // Add respective thrust components and limit to (0 <= PWM <= 65,535)
+    motorPower.m2 = limitThrust(control->thrust - r + p + y);
+    motorPower.m3 = limitThrust(control->thrust + r + p - y);
+    motorPower.m4 = limitThrust(control->thrust + r - p + y);
+    
+  }
+  else
+  {
+    // Default 'X' Configuration
     int16_t r = control->roll / 2.0f; // Divide roll thrust between each motor
     int16_t p = control->pitch / 2.0f;
     motorPower.m1 = limitThrust(control->thrust - r + p + control->yaw); // Add respective thrust components
     motorPower.m2 = limitThrust(control->thrust - r - p - control->yaw);
     motorPower.m3 =  limitThrust(control->thrust + r - p + control->yaw);
     motorPower.m4 =  limitThrust(control->thrust + r + p - control->yaw);
-  #else // QUAD_FORMATION_NORMAL
-    motorPower.m1 = limitThrust(control->thrust + control->pitch +
-                               control->yaw);
-    motorPower.m2 = limitThrust(control->thrust - control->roll -
-                               control->yaw);
-    motorPower.m3 =  limitThrust(control->thrust - control->pitch +
-                               control->yaw);
-    motorPower.m4 =  limitThrust(control->thrust + control->roll -
-                               control->yaw);
-  #endif
+  }
+
+
+
+  
 
   if (motorSetEnable)
   { // This maps thrust to voltage, compensates for battery voltage, then converts to PWM  
@@ -123,10 +140,27 @@ void powerDistribution(const control_t *control)
       motorPower.m4 = idleThrust;
     }
 
-    motorsSetRatio(MOTOR_M1, motorPower.m1);
-    motorsSetRatio(MOTOR_M2, motorPower.m2);
-    motorsSetRatio(MOTOR_M3, motorPower.m3);
-    motorsSetRatio(MOTOR_M4, motorPower.m4);
+    if(safeModeEnable)
+    {
+      motorsSetRatio(MOTOR_M1, 0);
+      motorsSetRatio(MOTOR_M2, 0);
+      motorsSetRatio(MOTOR_M3, 0);
+      motorsSetRatio(MOTOR_M4, 0);
+    }
+    else{
+      motorsSetRatio(MOTOR_M1, motorPower.m1);
+      motorsSetRatio(MOTOR_M2, motorPower.m2);
+      motorsSetRatio(MOTOR_M3, motorPower.m3);
+      motorsSetRatio(MOTOR_M4, motorPower.m4);
+    }
+
+    // Convert PWM to motor speeds (Forster: Eq. 3.4b)
+    MS1 = 0.04077f*motorPower.m1 + 380.836f;
+    MS2 = 0.04077f*motorPower.m2 + 380.836f;
+    MS3 = 0.04077f*motorPower.m3 + 380.836f;
+    MS4 = 0.04077f*motorPower.m4 + 380.836f;
+
+    
   }
 }
 
@@ -136,6 +170,7 @@ PARAM_ADD(PARAM_UINT16, m1, &motorPowerSet.m1)
 PARAM_ADD(PARAM_UINT16, m2, &motorPowerSet.m2)
 PARAM_ADD(PARAM_UINT16, m3, &motorPowerSet.m3)
 PARAM_ADD(PARAM_UINT16, m4, &motorPowerSet.m4)
+PARAM_ADD(PARAM_UINT8, SafeMode, &safeModeEnable)
 PARAM_GROUP_STOP(motorPowerSet)
 
 PARAM_GROUP_START(powerDist)
@@ -147,4 +182,8 @@ LOG_ADD(LOG_UINT32, m1, &motorPower.m1)
 LOG_ADD(LOG_UINT32, m2, &motorPower.m2)
 LOG_ADD(LOG_UINT32, m3, &motorPower.m3)
 LOG_ADD(LOG_UINT32, m4, &motorPower.m4)
+LOG_ADD(LOG_FLOAT, MS1, &MS1)
+LOG_ADD(LOG_FLOAT, MS2, &MS2)
+LOG_ADD(LOG_FLOAT, MS3, &MS3)
+LOG_ADD(LOG_FLOAT, MS4, &MS4)
 LOG_GROUP_STOP(motor)

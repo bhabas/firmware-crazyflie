@@ -204,19 +204,19 @@ static const DeckDriver deck_info = {
 
 DECK_DRIVER(deck_info);
 
-PARAM_GROUP_START(activeMarker)
-PARAM_ADD(PARAM_UINT8, front, &requestedId[0])
-PARAM_ADD(PARAM_UINT8, back, &requestedId[1])
-PARAM_ADD(PARAM_UINT8, left, &requestedId[2])
-PARAM_ADD(PARAM_UINT8, right, &requestedId[3])
-PARAM_ADD(PARAM_UINT8, mode, &requestedDeckMode)
-PARAM_ADD(PARAM_UINT8, poll, &doPollDeckButtonSensor)
+// PARAM_GROUP_START(activeMarker)
+// PARAM_ADD(PARAM_UINT8, front, &requestedId[0])
+// PARAM_ADD(PARAM_UINT8, back, &requestedId[1])
+// PARAM_ADD(PARAM_UINT8, left, &requestedId[2])
+// PARAM_ADD(PARAM_UINT8, right, &requestedId[3])
+// PARAM_ADD(PARAM_UINT8, mode, &requestedDeckMode)
+// PARAM_ADD(PARAM_UINT8, poll, &doPollDeckButtonSensor)
 
-#ifdef ACTIVE_MARKER_DECK_TEST
-PARAM_ADD(PARAM_UINT8, canStart, &activeMarkerDeckCanStart)
-#endif
+// #ifdef ACTIVE_MARKER_DECK_TEST
+// PARAM_ADD(PARAM_UINT8, canStart, &activeMarkerDeckCanStart)
+// #endif
 
-PARAM_GROUP_STOP(activeMarker)
+// PARAM_GROUP_STOP(activeMarker)
 
 LOG_GROUP_START(activeMarker)
 LOG_ADD(LOG_UINT8, btSns, &deckButtonSensorValue)

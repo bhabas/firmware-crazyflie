@@ -919,6 +919,6 @@ LOG_ADD(LOG_FLOAT, zVariance, &gyroBiasRunning.variance.z)
 LOG_GROUP_STOP(gyro)
 #endif
 
-PARAM_GROUP_START(imu_sensors)
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, BMP388, &isBarometerPresent)
-PARAM_GROUP_STOP(imu_sensors)
+// PARAM_GROUP_START(imu_sensors)
+// PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, BMP388, &isBarometerPresent)
+// PARAM_GROUP_STOP(imu_sensors)

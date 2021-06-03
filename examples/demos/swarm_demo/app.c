@@ -487,15 +487,15 @@ static void resetLockData() {
     }
 }
 
-PARAM_GROUP_START(app)
-  PARAM_ADD(PARAM_UINT8, takeoff, &takeOffWhenReady)
-  PARAM_ADD(PARAM_FLOAT, start, &goToInitialPositionWhenReady)
-  PARAM_ADD(PARAM_UINT8, stop, &terminateTrajectoryAndLand)
-  PARAM_ADD(PARAM_FLOAT, offsx, &trajecory_center_offset_x)
-  PARAM_ADD(PARAM_FLOAT, offsy, &trajecory_center_offset_y)
-  PARAM_ADD(PARAM_FLOAT, offsz, &trajecory_center_offset_z)
-  PARAM_ADD(PARAM_UINT8, trajcount, &trajectoryCount)
-PARAM_GROUP_STOP(app)
+// PARAM_GROUP_START(app)
+//   PARAM_ADD(PARAM_UINT8, takeoff, &takeOffWhenReady)
+//   PARAM_ADD(PARAM_FLOAT, start, &goToInitialPositionWhenReady)
+//   PARAM_ADD(PARAM_UINT8, stop, &terminateTrajectoryAndLand)
+//   PARAM_ADD(PARAM_FLOAT, offsx, &trajecory_center_offset_x)
+//   PARAM_ADD(PARAM_FLOAT, offsy, &trajecory_center_offset_y)
+//   PARAM_ADD(PARAM_FLOAT, offsz, &trajecory_center_offset_z)
+//   PARAM_ADD(PARAM_UINT8, trajcount, &trajectoryCount)
+// PARAM_GROUP_STOP(app)
 
 LOG_GROUP_START(app)
   LOG_ADD(LOG_UINT8, state, &state)

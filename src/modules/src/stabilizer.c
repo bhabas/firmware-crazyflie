@@ -104,6 +104,9 @@ static struct {
   int16_t rateRoll;
   int16_t ratePitch;
   int16_t rateYaw;
+
+  // compressed xy position - mm
+  uint32_t xy;
 } stateCompressed;
 
 static struct {
@@ -143,6 +146,30 @@ static void calcSensorToOutputLatency(const sensorData_t *sensorData)
   inToOutLatency = outTimestamp - sensorData->interruptTimestamp;
 }
 
+uint32_t compressXY(float x, float y)
+{
+  
+  uint16_t xnew, ynew;
+  uint32_t xy;
+
+  // CONVERT FLOATS TO INTS OFFSET BY UINT16_MAX/2.0
+  xnew = x*1000.0f + 32767.0f;
+  ynew = y*1000.0f + 32767.0f;
+
+
+  // CLIP RANGES OF VALUES
+  xnew = (xnew < UINT16_MAX) ? xnew : UINT16_MAX;
+  xnew = (xnew > 0) ? xnew : 0;
+
+  ynew = (ynew < UINT16_MAX) ? ynew : UINT16_MAX;
+  ynew = (ynew > 0) ? ynew : 0;
+
+  // APPEND YNEW BYTES TO XNEW BYTES
+  xy = (xnew << 16 | ynew); // Shift xnew by 16 and combine
+
+  return xy;
+};
+
 static void compressState()
 {
   stateCompressed.x = state.position.x * 1000.0f;
@@ -168,6 +195,9 @@ static void compressState()
   stateCompressed.rateRoll = sensorData.gyro.x * deg2millirad;
   stateCompressed.ratePitch = -sensorData.gyro.y * deg2millirad;
   stateCompressed.rateYaw = sensorData.gyro.z * deg2millirad;
+
+  stateCompressed.xy = compressXY(state.position.x,state.position.y);
+  // DEBUG_PRINT("%lu \n",stateCompressed.xy);
 }
 
 static void compressSetpoint()
@@ -256,6 +286,7 @@ static void stabilizerTask(void* param)
 
   DEBUG_PRINT("Ready to fly.\n");
 
+  // ================ MAIN SYSTEM LOOP - TOP ================ //
   while(1) {
     // The sensor should unlock at 1kHz
     sensorsWaitDataReady();
@@ -269,13 +300,14 @@ static void stabilizerTask(void* param)
     if (testState != testDone) {
       sensorsAcquire(&sensorData, tick);
       testProps(&sensorData);
-    } else {
-      // allow to update estimator dynamically
+    } 
+    else {
+      // Allow to update estimator dynamically
       if (getStateEstimator() != estimatorType) {
         stateEstimatorSwitchTo(estimatorType);
         estimatorType = getStateEstimator();
       }
-      // allow to update controller dynamically
+      // Allow to update controller dynamically
       if (getControllerType() != controllerType) {
         controllerInit(controllerType);
         controllerType = getControllerType();
@@ -287,7 +319,7 @@ static void stabilizerTask(void* param)
       commanderGetSetpoint(&setpoint, &state);
       compressSetpoint();
 
-      sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
+      sitAwUpdateSetpoint(&setpoint, &sensorData, &state); // Situation Awareness (Tumble,Freefall,At Rest)
       collisionAvoidanceUpdateSetpoint(&setpoint, &sensorData, &state, tick);
 
       controller(&control, &setpoint, &sensorData, &state, tick);
@@ -297,7 +329,8 @@ static void stabilizerTask(void* param)
       checkStops = systemIsArmed();
       if (emergencyStop || (systemIsArmed() == false)) {
         powerStop();
-      } else {
+      } 
+      else {
         powerDistribution(&control);
       }
 
@@ -319,6 +352,7 @@ static void stabilizerTask(void* param)
       }
     }
   }
+  // ================ MAIN SYSTEM LOOP - BOTTOM ================ //
 }
 
 void stabilizerSetEmergencyStop()
@@ -695,4 +729,6 @@ LOG_ADD(LOG_UINT32, quat, &stateCompressed.quat)           // compressed quatern
 LOG_ADD(LOG_INT16, rateRoll, &stateCompressed.rateRoll)   // angular velocity - milliradians / sec
 LOG_ADD(LOG_INT16, ratePitch, &stateCompressed.ratePitch)
 LOG_ADD(LOG_INT16, rateYaw, &stateCompressed.rateYaw)
+
+LOG_ADD(LOG_UINT32, xy, &stateCompressed.xy)
 LOG_GROUP_STOP(stateEstimateZ)

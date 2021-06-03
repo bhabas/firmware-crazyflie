@@ -62,7 +62,7 @@ typedef struct _PmSyslinkInfo
 }  __attribute__((packed)) PmSyslinkInfo;
 
 static float     batteryVoltage;
-static uint16_t  batteryVoltageMV;
+static uint16_t  batteryVoltageMV; // Compressed battery voltage
 static float     batteryVoltageMin = 6.0;
 static float     batteryVoltageMax = 0.0;
 
@@ -401,7 +401,7 @@ void pmTask(void *param)
 
 LOG_GROUP_START(pm)
 LOG_ADD(LOG_FLOAT, vbat, &batteryVoltage)
-LOG_ADD(LOG_UINT16, vbatMV, &batteryVoltageMV)
+LOG_ADD(LOG_UINT16, vbatZ, &batteryVoltageMV)
 LOG_ADD(LOG_FLOAT, extVbat, &extBatteryVoltage)
 LOG_ADD(LOG_UINT16, extVbatMV, &extBatteryVoltageMV)
 LOG_ADD(LOG_FLOAT, extCurr, &extBatteryCurrent)

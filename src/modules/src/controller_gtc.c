@@ -5,8 +5,8 @@
 // XY POSITION PID
 static float P_kp_xy = 0.4f;
 static float P_kd_xy = 0.4f;
-static float P_ki_xy = 0.05f;
-static float i_range_xy = 0.5f;
+static float P_ki_xy = 0.1f;
+static float i_range_xy = 0.25f;
 
 // Z POSITION PID
 static float P_kp_z = 0.9f;
@@ -42,6 +42,21 @@ void controllerGTCReset(void)
     // Reset errors to zero
     e_PI = vzero();
     e_RI = vzero();
+
+    x_d = mkvec(0.0f,0.0f,0.0f);
+    v_d = mkvec(0.0f,0.0f,0.0f);
+    a_d = mkvec(0.0f,0.0f,0.0f);
+    
+
+    Moment_flag = false;
+    policy_armed_flag = false;
+    flip_flag = false;
+
+    t = 0;
+    execute_traj = false;
+
+
+
 }
 
 bool controllerGTCTest(void)
@@ -52,21 +67,6 @@ bool controllerGTCTest(void)
 void GTC_Command(setpoint_t *setpoint)
 {   
     switch(setpoint->cmd_type){
-        case 10: // (Home/Reset)
-  
-            x_d = mkvec(0.0f,0.0f,0.0f);
-            v_d = mkvec(0.0f,0.0f,0.0f);
-            a_d = mkvec(0.0f,0.0f,0.0f);
-            
-
-            Moment_flag = false;
-            policy_armed_flag = false;
-            flip_flag = false;
-
-            t = 0;
-            execute_traj = false;
-
-            break;
 
         case 1: // Position
             x_d.x = setpoint->cmd_val1;
@@ -418,11 +418,11 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         compressGTCSetpoint();
         compressMiscStates();
 
-        if(tick%20 == 0){
-            DEBUG_PRINT("Flip_Flag: %.3f \n",(float)flip_flag);
+        // if(tick%20 == 0){
+        //     DEBUG_PRINT("Flip_Flag: %.3f \n",(float)flip_flag);
             
             
-        }
+        // }
 
     }
 

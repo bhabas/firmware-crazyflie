@@ -48,12 +48,16 @@ void controllerGTCReset(void)
     a_d = mkvec(0.0f,0.0f,0.0f);
     
 
+    tumbled = false;
+    motorstop_flag = false;
+
     Moment_flag = false;
     policy_armed_flag = false;
     flip_flag = false;
 
     t = 0;
     execute_traj = false;
+
 
 
 

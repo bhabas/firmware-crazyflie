@@ -418,12 +418,6 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         compressGTCSetpoint();
         compressMiscStates();
 
-        // if(tick%20 == 0){
-        //     DEBUG_PRINT("Flip_Flag: %.3f \n",(float)flip_flag);
-            
-            
-        // }
-
     }
 
 }
@@ -508,12 +502,19 @@ LOG_ADD(LOG_UINT8, Flip_Flag, &flip_flag)
 LOG_GROUP_STOP(miscStatesZ_GTC)
 
 
-
-
-
 LOG_GROUP_START(F_M)
 LOG_ADD(LOG_FLOAT, F_thrust, &F_thrust)
 LOG_ADD(LOG_FLOAT, M_roll, &M.x)
 LOG_ADD(LOG_FLOAT, M_pitch, &M.y)
 LOG_ADD(LOG_FLOAT, M_yaw, &M.z)
 LOG_GROUP_STOP(F_M)
+
+LOG_GROUP_START(Debug)
+LOG_ADD(LOG_UINT8, Tumbled_Flag, &tumbled)
+LOG_ADD(LOG_UINT8, Error_Reset_Flag, &errorReset)
+LOG_ADD(LOG_UINT8, Motorstop_Flag, &motorstop_flag)
+
+LOG_ADD(LOG_UINT8, Flip_Flag, &flip_flag)
+LOG_ADD(LOG_UINT8, Trajectory_Flag, &execute_traj)
+LOG_ADD(LOG_UINT8, Policy_Armed_Flag, &policy_armed_flag)
+LOG_GROUP_STOP(Debug)

@@ -4,12 +4,12 @@
 
 // XY POSITION PID
 static float P_kp_xy = 0.4f;
-static float P_kd_xy = 0.4f;
-static float P_ki_xy = 0.1f;
-static float i_range_xy = 0.25f;
+static float P_kd_xy = 0.245f;
+static float P_ki_xy = 0.3f;
+static float i_range_xy = 0.1f;
 
 // Z POSITION PID
-static float P_kp_z = 0.9f;
+static float P_kp_z = 1.2f;
 static float P_kd_z = 0.35f;
 static float P_ki_z = 0.3f;
 static float i_range_z = 0.25f;
@@ -21,10 +21,10 @@ static float R_ki_xy = 0.0f;
 static float i_range_R_xy = 1.0f;
 
 // Z ATTITUDE PID
-static float R_kp_z = 3e-4f;
-static float R_kd_z = 5e-5f;
-static float R_ki_z = 3e-5f;
-static float i_range_R_z = 0.05f;
+static float R_kp_z = 30e-5f;
+static float R_kd_z = 10e-5f;
+static float R_ki_z = -20e-5f;
+static float i_range_R_z = 0.5f;
 
 
 
@@ -71,6 +71,10 @@ bool controllerGTCTest(void)
 void GTC_Command(setpoint_t *setpoint)
 {   
     switch(setpoint->cmd_type){
+        case 0: // Reset
+            controllerGTCReset();
+            break;
+
 
         case 1: // Position
             x_d.x = setpoint->cmd_val1;
@@ -421,6 +425,11 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         
         compressGTCSetpoint();
         compressMiscStates();
+
+        if (tick%50 ==  0)
+        {
+            DEBUG_PRINT("e_R.z: %.2f | e_RI.z: %.2f\n",e_R.z*180.0f/3.14f,e_RI.z);
+        }
 
     }
 

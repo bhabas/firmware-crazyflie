@@ -341,7 +341,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         Gyro_dyn = vsub(temp1_v,temp4_v);
 
         F_thrust = vdot(F_thrust_ideal, b3);    // Project ideal thrust onto b3 vector [N]
-        F_thrust = clamp(F_thrust,0.0f,F_thrust_max*0.8f);
+        // F_thrust = clamp(F_thrust,0.0f,F_thrust_max*0.7f);
         M = vadd(R_effort,Gyro_dyn);            // Control moments [Nm]
 
         // =========== THRUST AND MOMENTS [FORCE NOTATION] =========== // 
@@ -393,6 +393,10 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         f_roll_pwm = thrust2PWM(f_roll);
         f_pitch_pwm = thrust2PWM(f_pitch);
         f_yaw_pwm = thrust2PWM(f_yaw);
+
+        f_thrust_pwm = clamp(f_thrust_pwm,0,(int)65535*0.85f);
+        // F_thrust = clamp(F_thrust,0.0f,F_thrust_max*0.7f);
+
 
 
         // =========== INSERT PWM VALUES INTO CONTROL STRUCT =========== //

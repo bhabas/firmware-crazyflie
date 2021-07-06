@@ -258,8 +258,8 @@ static void compressMiscStates(){
     miscStatesZ_GTC.OF_xy = compressXY(OF_x,OF_y);              // [milli-rad/s]
     miscStatesZ_GTC.RREV = RREV * 1000.0f;                      // [milli-rad/s]
 
-    miscStatesZ_GTC.Mxy = compressXY(M.x*1000.0f,M.y*1000.0f);  // [mN | N*um]
-    miscStatesZ_GTC.FMz = compressXY(F_thrust,M.z*1000.0f);
+    miscStatesZ_GTC.Mxy = compressXY((float)f_roll_pwm/65535.0f,(float)f_pitch_pwm/65535.0f);  // [mN | N*um]
+    miscStatesZ_GTC.FMz = compressXY((float)f_thrust_pwm/65535.0f,(float)f_yaw_pwm/65535.0f);
 
     miscStatesZ_GTC.MS12 = compressXY(MS1*0.01f,MS2*0.01f);     // [rad/s*0.01]
     miscStatesZ_GTC.MS34 = compressXY(MS3*0.01f,MS4*0.01f);

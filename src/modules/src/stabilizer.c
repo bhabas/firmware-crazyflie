@@ -147,7 +147,7 @@ static void calcSensorToOutputLatency(const sensorData_t *sensorData)
 }
 
 uint32_t compressXY(float x, float y)
-{
+{ // Compresses values in range (-32.767 - 32.767)
   
   uint16_t xnew, ynew;
   uint32_t xy;

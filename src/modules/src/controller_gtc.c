@@ -415,10 +415,10 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
 
         
 
-        M1_pwm = limitThrust(f_thrust_pwm - f_roll_pwm - f_pitch_pwm - f_yaw_pwm); // Add respective thrust components and limit to (0 <= PWM <= 65,535)
-        M2_pwm = limitThrust(f_thrust_pwm - f_roll_pwm + f_pitch_pwm + f_yaw_pwm);
-        M3_pwm = limitThrust(f_thrust_pwm + f_roll_pwm + f_pitch_pwm - f_yaw_pwm);
-        M4_pwm = limitThrust(f_thrust_pwm + f_roll_pwm - f_pitch_pwm + f_yaw_pwm);
+        M1_pwm = limitThrust(f_thrust_pwm + f_roll_pwm - f_pitch_pwm + f_yaw_pwm); // Add respective thrust components and limit to (0 <= PWM <= 65,535)
+        M2_pwm = limitThrust(f_thrust_pwm + f_roll_pwm + f_pitch_pwm - f_yaw_pwm);
+        M3_pwm = limitThrust(f_thrust_pwm - f_roll_pwm + f_pitch_pwm + f_yaw_pwm);
+        M4_pwm = limitThrust(f_thrust_pwm - f_roll_pwm - f_pitch_pwm - f_yaw_pwm);
 
         // Convert PWM to motor speeds (Forster: Eq. 3.4b)
         MS1 = 0.04077f*M1_pwm + 380.836f;

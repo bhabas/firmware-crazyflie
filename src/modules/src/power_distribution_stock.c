@@ -46,6 +46,13 @@ static struct {
   uint32_t m2;
   uint32_t m3;
   uint32_t m4;
+} motorPower_GTC;
+
+static struct {
+  uint32_t m1;
+  uint32_t m2;
+  uint32_t m3;
+  uint32_t m4;
 } motorPower;
 
 static struct {
@@ -97,15 +104,22 @@ void powerDistribution(const control_t *control)
     int32_t p = (control->pitch)*2;
     int32_t y = (control->yaw)*2;
 
-    motorPower.m1 = limitThrust(control->thrust - r - p - y); // Add respective thrust components and limit to (0 <= PWM <= 65,535)
-    motorPower.m2 = limitThrust(control->thrust - r + p + y);
-    motorPower.m3 = limitThrust(control->thrust + r + p - y);
-    motorPower.m4 = limitThrust(control->thrust + r - p + y);
+    // THRUSTS IN CUSTOM CONFIGURATION
+    motorPower_GTC.m1 = limitThrust(control->thrust + r - p + y); // Add respective thrust components and limit to (0 <= PWM <= 65,535)
+    motorPower_GTC.m2 = limitThrust(control->thrust + r + p - y);
+    motorPower_GTC.m3 = limitThrust(control->thrust - r + p + y);
+    motorPower_GTC.m4 = limitThrust(control->thrust - r - p - y);
+   
+    // MAP THRUSTS TO CRAZYFLIE CONFIGURATION
+    motorPower.m1 = motorPower_GTC.m4;
+    motorPower.m2 = motorPower_GTC.m3;
+    motorPower.m3 = motorPower_GTC.m2;
+    motorPower.m4 = motorPower_GTC.m1;
     
   }
   else
   {
-    // Default 'X' Configuration
+    // DEFAULT 'X' CONFIGURATION
     int16_t r = control->roll / 2.0f; // Divide roll thrust between each motor
     int16_t p = control->pitch / 2.0f;
     motorPower.m1 = limitThrust(control->thrust - r + p + control->yaw); // Add respective thrust components
@@ -155,7 +169,7 @@ void powerDistribution(const control_t *control)
     }
 
     // Convert PWM to motor speeds (Forster: Eq. 3.4b)
-    MS1 = 0.04077f*motorPower.m1 + 380.836f;
+    MS1 = 0.04077f*motorPower.m1 + 380.836f; // These aren't true anymore w/ new motors
     MS2 = 0.04077f*motorPower.m2 + 380.836f;
     MS3 = 0.04077f*motorPower.m3 + 380.836f;
     MS4 = 0.04077f*motorPower.m4 + 380.836f;
@@ -178,10 +192,10 @@ PARAM_ADD(PARAM_UINT32, idleThrust, &idleThrust)
 PARAM_GROUP_STOP(powerDist)
 
 LOG_GROUP_START(motor)
-LOG_ADD(LOG_UINT32, m1, &motorPower.m1)
-LOG_ADD(LOG_UINT32, m2, &motorPower.m2)
-LOG_ADD(LOG_UINT32, m3, &motorPower.m3)
-LOG_ADD(LOG_UINT32, m4, &motorPower.m4)
+LOG_ADD(LOG_UINT32, m1, &motorPower_GTC.m1)
+LOG_ADD(LOG_UINT32, m2, &motorPower_GTC.m2)
+LOG_ADD(LOG_UINT32, m3, &motorPower_GTC.m3)
+LOG_ADD(LOG_UINT32, m4, &motorPower_GTC.m4)
 LOG_ADD(LOG_FLOAT, MS1, &MS1)
 LOG_ADD(LOG_FLOAT, MS2, &MS2)
 LOG_ADD(LOG_FLOAT, MS3, &MS3)

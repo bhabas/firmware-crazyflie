@@ -99,6 +99,19 @@ uint16_t limitUint16(int32_t value)
 
   return (uint16_t)value;
 }
+uint16_t limitPWM(int32_t value) // Limit PWM value to accurate motor curve limit (60,000)
+{
+  if(value > 60000)
+  {
+    value = 60000;
+  }
+  else if(value < 0)
+  {
+    value = 0;
+  }
+
+  return (uint16_t)value;
+}
 
 float constrain(float value, const float minVal, const float maxVal)
 {

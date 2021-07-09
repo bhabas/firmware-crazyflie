@@ -105,10 +105,10 @@ void powerDistribution(const control_t *control)
     int32_t y = (control->yaw)*2;
 
     // THRUSTS IN CUSTOM CONFIGURATION
-    motorPower_GTC.m1 = limitThrust(control->thrust + r - p + y); // Add respective thrust components and limit to (0 <= PWM <= 65,535)
-    motorPower_GTC.m2 = limitThrust(control->thrust + r + p - y);
-    motorPower_GTC.m3 = limitThrust(control->thrust - r + p + y);
-    motorPower_GTC.m4 = limitThrust(control->thrust - r - p - y);
+    motorPower_GTC.m1 = limitPWM(control->thrust + r - p + y); // Add respective thrust components and limit to (0 <= PWM <= 65,535)
+    motorPower_GTC.m2 = limitPWM(control->thrust + r + p - y);
+    motorPower_GTC.m3 = limitPWM(control->thrust - r + p + y);
+    motorPower_GTC.m4 = limitPWM(control->thrust - r - p - y);
    
     // MAP THRUSTS TO CRAZYFLIE CONFIGURATION
     motorPower.m1 = motorPower_GTC.m4;

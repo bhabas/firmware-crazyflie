@@ -188,7 +188,7 @@ static float T = 0.0f;
 static uint8_t traj_type = 0;
 static bool execute_traj = false;
 
-#define limitThrust(VAL) limitUint16(VAL) // Limit PWM value to UINT16_MAX = 65,535
+
 
 static struct {
     
@@ -265,6 +265,10 @@ static void compressMiscStates(){
     miscStatesZ_GTC.MS34 = compressXY(MS3*0.01f,MS4*0.01f);
 
 }
+
+
+
+
 
 #endif //__CONTROLLER_GTC_H__
 

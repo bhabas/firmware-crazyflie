@@ -226,16 +226,16 @@ static struct {
 static inline int32_t thrust2PWM(float f) 
 {
     // Conversion values calculated from self motor analysis
-    float a = 7.77e-11;
-    float b = 2.64e-4;
+    float a = 2.98e-4;
+    float b = -9.84e-1;
 
     float s = 1; // sign of value
     int32_t f_pwm = 0;
 
     s = f/fabsf(f);
-    f = fabsf(f)*1000.0f/9.81f;
+    f = fabsf(f)*1000.0f/9.81f; // Convert thrust to grams
     
-    f_pwm = s*(sqrtf(4*a*f+b*b)/(2*a) - b/(2*a));
+    f_pwm = s*(f-b)/a;
 
     return f_pwm;
 

@@ -155,15 +155,17 @@ void controllerGTCTraj()
 
     }
 
-    else if(v/a < t)
+    if(v/a < t)
     {
         x_d.z = v*t - fsqr(v)/(2.0f*a) + s_0;
         v_d.z = v;
         a_d.z = 0.0f;
 
+        
+
     }
 
-    // else if((T-v/a) < t && t <= T)
+    // if((T-v/a) < t && t <= T)
     // {
     //     x_d.z = (2.0f*a*v*T-2.0f*fsqr(v)-fsqr(a)*fsqr(t-T))/(2.0f*a) + s_0;
     //     v_d.z = a*(T-t);
@@ -430,9 +432,15 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         compressGTCSetpoint();
         compressMiscStates();
 
-        if (tick%50 ==  0)
+        if (tick%100 ==  0)
         {
-            DEBUG_PRINT("e_R.z: %.2f | e_RI.z: %.2f\n",e_R.z*180.0f/3.14f,e_RI.z);
+            DEBUG_PRINT("e_PI.z: %.2f\n",e_PI.z);
+            // printvec(F_thrust_ideal);
+            // DEBUG_PRINT("F_thrust: %.2f | M.x: %.2f | M.y: %.2f | M.z: %.2f\n",F_thrust,M.x,M.y,M.z);
+            // DEBUG_PRINT("f_thrust: %.2f | f_roll: %.2f | f_pitch: %.2f | f_yaw: %.2f\n",f_thrust,f_roll,f_pitch,f_yaw);
+            // DEBUG_PRINT("f_thrust_pwm: %d | f_roll_pwm: %d | f_pitch_pwm: %d | f_yaw_pwm: %d\n",f_thrust_pwm,f_roll_pwm,f_pitch_pwm,f_yaw_pwm);
+
+
         }
 
     }

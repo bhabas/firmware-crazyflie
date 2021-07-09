@@ -40,7 +40,7 @@ void GTC_Command(setpoint_t *setpoint);
 
 
 // SYSTEM PARAMETERS
-static float m = 0.035; // [g]
+static float m = 0.037; // [g]
 static float g = GRAVITY_MAGNITUDE;
 struct mat33 J; // Rotational Inertia Matrix [kg*m^2]
 static float h_ceiling = 2.50f; // [m]
@@ -78,7 +78,7 @@ static struct mat33 R; // Orientation as rotation matrix
 static struct vec stateEul = {0.0f,0.0f,0.0f}; // Pose in Euler Angles [YZX Notation]
 
 // DESIRED STATES
-static struct vec x_d = {0.0f,0.0f,0.0f}; // Pos-desired [m]
+static struct vec x_d = {0.0f,0.0f,0.2f}; // Pos-desired [m]
 static struct vec v_d = {0.0f,0.0f,0.0f}; // Vel-desired [m/s]
 static struct vec a_d = {0.0f,0.0f,0.0f}; // Acc-desired [m/s^2]
 
@@ -225,15 +225,15 @@ static struct {
 // EXPLICIT FUNTIONS
 static inline int32_t thrust2PWM(float f) 
 {
-    // Conversion values derived from J. Forster Paper
-    float a = 2.108e-11;
-    float b = 1.06e-6;
+    // Conversion values calculated from self motor analysis
+    float a = 7.77e-11;
+    float b = 2.64e-4;
 
     float s = 1; // sign of value
     int32_t f_pwm = 0;
 
     s = f/fabsf(f);
-    f = fabsf(f);
+    f = fabsf(f)*1000.0f/9.81f;
     
     f_pwm = s*(sqrtf(4*a*f+b*b)/(2*a) - b/(2*a));
 

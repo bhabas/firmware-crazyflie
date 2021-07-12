@@ -264,7 +264,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
             tumbled = true;
         }
 
-        // =========== TRANSLATIONAL ERRORS & DESIRED BODY-FIXED AXES =========== //
+        // =========== TRANSLATIONAL EFFORT =========== //
         e_x = vsub(statePos, x_d); // [e_x = pos-x_d]
         e_v = vsub(stateVel, v_d); // [e_v = vel-v_d]
 
@@ -290,11 +290,12 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
 
         F_thrust_ideal = vadd3(P_effort, temp1_v,temp2_v); 
 
-        // =========== ROTATIONAL ERRORS =========== // 
+        // =========== DESIRED BODY AXES =========== // 
         b3_d = vnormalize(F_thrust_ideal);
         b2_d = vnormalize(vcross(b3_d, b1_d));      // [b3_d x b1_d] | body-fixed horizontal axis
         temp1_v = vnormalize(vcross(b2_d, b3_d));
         R_d = mcolumns(temp1_v, b2_d, b3_d);        // Desired rotation matrix from calculations
+
 
         // ATTITUDE CONTROL
         if (attCtrlEnable){ 
@@ -302,23 +303,24 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         }
 
 
+        // =========== ROTATIONAL ERRORS =========== // 
         RdT_R = mmul(mtranspose(R_d), R);       // [R_d'*R]
         RT_Rd = mmul(mtranspose(R), R_d);       // [R'*R_d]
 
         temp1_v = dehat(msub(RdT_R, RT_Rd));    // [dehat(R_d'*R - R'*R)]
         e_R = vscl(0.5f, temp1_v);              // Rotation error | [eR = 0.5*dehat(R_d'*R - R'*R)]
 
-        temp1_v = mvmul(RT_Rd, omega_d);        // [R.transpose()*R_d*omega_d]
-        e_w = vsub(stateOmega, temp1_v);        // Ang. vel error | [e_w = omega - R.transpose()*R_d*omega_d] 
+        temp1_v = mvmul(RT_Rd, omega_d);        // [R'*R_d*omega_d]
+        e_w = vsub(stateOmega, temp1_v);        // Ang. vel error | [e_w = omega - R'*R_d*omega_d] 
 
         // ROT. INTEGRAL ERROR
-        e_RI.x += (-e_R.x)*dt;
+        e_RI.x += (e_R.x)*dt;
         e_RI.x = clamp(e_RI.x, -i_range_R_xy, i_range_R_xy);
 
-        e_RI.y += (-e_R.y)*dt;
+        e_RI.y += (e_R.y)*dt;
         e_RI.y = clamp(e_RI.y, -i_range_R_xy, i_range_R_xy);
 
-        e_RI.z += (-e_R.z)*dt;
+        e_RI.z += (e_R.z)*dt;
         e_RI.z = clamp(e_RI.z, -i_range_R_z, i_range_R_z);
 
         // =========== CONTROL EQUATIONS =========== // 
@@ -331,15 +333,15 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
 
         
 
-        /* Gyro_dyn = [omega x (J*omega)] - [J*( hat(omega)*R.transpose()*R_d*omega_d - R.transpose()*R_d*domega_d )] */
+        /* Gyro_dyn = [omega x (J*omega)] - [J*( hat(omega)*R'*R_d*omega_d - R'*R_d*domega_d )] */
         temp1_v = vcross(stateOmega, mvmul(J, stateOmega)); // [omega x J*omega]
 
 
-        temp1_m = mmul(hat(stateOmega), RT_Rd); //  hat(omega)*R.transpose()*R_d
-        temp2_v = mvmul(temp1_m, omega_d);      // (hat(omega)*R.transpose()*R_d)*omega_d
-        temp3_v = mvmul(RT_Rd, domega_d);       // (R.transpose()*R_d*domega_d)
+        temp1_m = mmul(hat(stateOmega), RT_Rd); //  hat(omega)*R'*R_d
+        temp2_v = mvmul(temp1_m, omega_d);      // (hat(omega)*R'*R_d)*omega_d
+        temp3_v = mvmul(RT_Rd, domega_d);       // (R'*R_d*domega_d)
 
-        temp4_v = mvmul(J, vsub(temp2_v, temp3_v)); // J*(hat(omega)*R.transpose()*R_d*omega_d - R.transpose()*R_d*domega_d)
+        temp4_v = mvmul(J, vsub(temp2_v, temp3_v)); // J*(hat(omega)*R'*R_d*omega_d - R'*R_d*domega_d)
         Gyro_dyn = vsub(temp1_v,temp4_v);
 
         F_thrust = vdot(F_thrust_ideal, b3);    // Project ideal thrust onto b3 vector [N]
@@ -362,7 +364,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
                     M_d.y = -G1*1e-3;
                     M_d.z = 0.0f;
 
-                    M = vscl(2.0f,M_d); // Need to double moment to ensure it survives the MS<0 cutoff
+                    M = vscl(2.0f,M_d); // Need to double moment to ensure it survives the PWM<0 cutoff
                     F_thrust = 0.0f;
 
                 }
@@ -422,11 +424,11 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         M3_pwm = limitPWM(f_thrust_pwm - f_roll_pwm + f_pitch_pwm + f_yaw_pwm);
         M4_pwm = limitPWM(f_thrust_pwm - f_roll_pwm - f_pitch_pwm - f_yaw_pwm);
 
-        // Convert PWM to motor speeds (Forster: Eq. 3.4b)
-        MS1 = 0.04077f*M1_pwm + 380.836f;
-        MS2 = 0.04077f*M2_pwm + 380.836f;
-        MS3 = 0.04077f*M3_pwm + 380.836f;
-        MS4 = 0.04077f*M4_pwm + 380.836f;
+        // Convert PWM to motor speeds
+        MS1 = sqrtf(PWM2thrust(M1_pwm)/kf);
+        MS2 = sqrtf(PWM2thrust(M2_pwm)/kf);
+        MS3 = sqrtf(PWM2thrust(M3_pwm)/kf);
+        MS4 = sqrtf(PWM2thrust(M4_pwm)/kf);
 
         
         compressGTCSetpoint();

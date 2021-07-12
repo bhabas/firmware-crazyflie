@@ -241,6 +241,21 @@ static inline int32_t thrust2PWM(float f)
 
 }        
 
+static inline float PWM2thrust(int32_t M_PWM) // Converts thrust in PWM to thrust in Newtons
+{
+    // Conversion values from new motors
+    float a = 2.98e-4;
+    float b = -9.84e-1;
+
+    float f = (a*M_PWM + b); // Convert thrust to grams
+
+    f = f*9.81/1000; // Convert thrust from grams to Newtons
+
+    return f;
+}
+
+
+
 static void compressGTCSetpoint(){
     setpointZ_GTC.xy = compressXY(x_d.x,x_d.y);
     setpointZ_GTC.z = x_d.z * 1000.0f;

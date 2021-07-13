@@ -47,7 +47,7 @@ void GTC_Command(setpoint_t *setpoint);
 static float m = 0.037; // [g]
 static float g = GRAVITY_MAGNITUDE;
 struct mat33 J; // Rotational Inertia Matrix [kg*m^2]
-static float h_ceiling = 2.50f; // [m]
+static float h_ceiling = 2.10f; // [m]
 
 static float d = 0.040f;    // COM to Prop [m]
 static float dp = 0.028284; // COM to Prop along x-axis [m]

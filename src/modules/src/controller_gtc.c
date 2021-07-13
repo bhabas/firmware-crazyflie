@@ -3,27 +3,27 @@
 
 
 // XY POSITION PID
-float P_kp_xy = 0.4f;
-float P_kd_xy = 0.2f;
-float P_ki_xy = 0.0f;
+float P_kp_xy = 0.5f;
+float P_kd_xy = 0.3f;
+float P_ki_xy = 0.1f;
 float i_range_xy = 0.3f;
 
 // Z POSITION PID
 float P_kp_z = 1.2f;
 float P_kd_z = 0.35f;
-float P_ki_z = 0.0f;
-float i_range_z = 0.5f;
+float P_ki_z = 0.1f;
+float i_range_z = 0.25f;
 
 // XY ATTITUDE PID
-float R_kp_xy = 0.003f;
-float R_kd_xy = 0.0001f;
+float R_kp_xy = 0.004f;
+float R_kd_xy = 0.0017f;
 float R_ki_xy = 0.0f;
 float i_range_R_xy = 1.0f;
 
 // Z ATTITUDE PID
-float R_kp_z = 30e-5f;
-float R_kd_z = 10e-5f;
-float R_ki_z = 20e-5f*0;
+float R_kp_z = 0.003f;
+float R_kd_z = 0.001f;
+float R_ki_z = 0.002;
 float i_range_R_z = 0.5f;
 
 
@@ -154,22 +154,27 @@ void controllerGTCTraj()
 
     }
 
+    // CONSTANT VELOCITY TRAJECTORY
     if(v/a < t)
     {
         x_d.z = v*t - fsqr(v)/(2.0f*a) + s_0;
         v_d.z = v;
         a_d.z = 0.0f;
-
-        
-
     }
+
+    // COMPLETE POSITION TRAJECTORY
+    // if(v/a <= t && t < (T-v/a))
+    // {
+    //     x_d.z = v*t - fsqr(v)/(2.0f*a) + s_0;
+    //     v_d.z = v;
+    //     a_d.z = 0.0f;
+    // }
 
     // if((T-v/a) < t && t <= T)
     // {
     //     x_d.z = (2.0f*a*v*T-2.0f*fsqr(v)-fsqr(a)*fsqr(t-T))/(2.0f*a) + s_0;
     //     v_d.z = a*(T-t);
     //     a_d.z = -a;
-
     // }
 
     t = t + dt;
@@ -223,14 +228,6 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
                         state->attitudeQuaternion.z,
                         state->attitudeQuaternion.w);
 
-
-        // statePos = mkvec(1.0f,0.0f,0.0f);                      // [m]
-        // stateVel = mkvec(0.0f,0.0f,0.0f);                      // [m]
-        // stateOmega = mkvec(0.0f,0.0f,0.0f);   // [rad/s]
-        // stateQuat = mkquat(0.0022815f,
-        //                 0.0871259f,
-        //                 0.0260773f,
-        //                 0.9958533f);
 
         RREV = stateVel.z/(h_ceiling - statePos.z);
         OF_x = stateVel.y/(h_ceiling - statePos.z);
@@ -431,13 +428,6 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         //     // DEBUG_PRINT("M1: %.1f | M2: %.1f | M3: %.1f | M4: %.1f\n",control->thrust,(float)control->roll,(float)control->pitch,(float)control->yaw);
 
         // }
-
-        // // Convert PWM to motor speeds
-        // MS1 = sqrtf(PWM2thrust(M1_pwm)/kf);
-        // MS2 = sqrtf(PWM2thrust(M2_pwm)/kf);
-        // MS3 = sqrtf(PWM2thrust(M3_pwm)/kf);
-        // MS4 = sqrtf(PWM2thrust(M4_pwm)/kf);
-
         
         compressGTCSetpoint();
         compressMiscStates();

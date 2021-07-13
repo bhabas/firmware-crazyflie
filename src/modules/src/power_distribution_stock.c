@@ -105,7 +105,7 @@ void powerDistribution(control_t *control,const uint32_t tick)
     float f_pitch_g = (float)(control->pitch)*1e-6f*Newton2g;
     float f_yaw_g = (float)(control->yaw)*1e-6f*Newton2g;
 
-    f_thrust_g = clamp(f_thrust_g,0.0f,f_MAX*0.7);    // Clamp thrust to prevent control saturation
+    f_thrust_g = clamp(f_thrust_g,0.0f,f_MAX*0.8);    // Clamp thrust to prevent control saturation
     control->thrust = f_thrust_g*g2Newton;
 
 

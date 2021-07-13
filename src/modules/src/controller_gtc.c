@@ -3,29 +3,28 @@
 
 
 // XY POSITION PID
-static float P_kp_xy = 0.4f;
-static float P_kd_xy = 0.245f;
-static float P_ki_xy = 0.3f;
-static float i_range_xy = 0.1f;
+float P_kp_xy = 0.4f;
+float P_kd_xy = 0.2f;
+float P_ki_xy = 0.0f;
+float i_range_xy = 0.3f;
 
 // Z POSITION PID
-static float P_kp_z = 1.2f;
-static float P_kd_z = 0.35f;
-static float P_ki_z = 0.3f;
-static float i_range_z = 0.25f;
+float P_kp_z = 1.2f;
+float P_kd_z = 0.35f;
+float P_ki_z = 0.0f;
+float i_range_z = 0.5f;
 
 // XY ATTITUDE PID
-static float R_kp_xy = 0.001f;
-static float R_kd_xy = 0.0005f;
-static float R_ki_xy = 0.0f;
-static float i_range_R_xy = 1.0f;
+float R_kp_xy = 0.003f;
+float R_kd_xy = 0.0001f;
+float R_ki_xy = 0.0f;
+float i_range_R_xy = 1.0f;
 
 // Z ATTITUDE PID
-static float R_kp_z = 30e-5f;
-static float R_kd_z = 10e-5f;
-static float R_ki_z = -20e-5f;
-static float i_range_R_z = 0.5f;
-
+float R_kp_z = 30e-5f;
+float R_kd_z = 10e-5f;
+float R_ki_z = 20e-5f*0;
+float i_range_R_z = 0.5f;
 
 
 
@@ -43,7 +42,7 @@ void controllerGTCReset(void)
     e_PI = vzero();
     e_RI = vzero();
 
-    x_d = mkvec(0.0f,0.0f,0.0f);
+    x_d = mkvec(0.0f,0.0f,0.2f);
     v_d = mkvec(0.0f,0.0f,0.0f);
     a_d = mkvec(0.0f,0.0f,0.0f);
     
@@ -224,6 +223,15 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
                         state->attitudeQuaternion.z,
                         state->attitudeQuaternion.w);
 
+
+        // statePos = mkvec(1.0f,0.0f,0.0f);                      // [m]
+        // stateVel = mkvec(0.0f,0.0f,0.0f);                      // [m]
+        // stateOmega = mkvec(0.0f,0.0f,0.0f);   // [rad/s]
+        // stateQuat = mkquat(0.0022815f,
+        //                 0.0871259f,
+        //                 0.0260773f,
+        //                 0.9958533f);
+
         RREV = stateVel.z/(h_ceiling - statePos.z);
         OF_x = stateVel.y/(h_ceiling - statePos.z);
         OF_y = stateVel.x/(h_ceiling - statePos.z);
@@ -345,7 +353,6 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         Gyro_dyn = vsub(temp1_v,temp4_v);
 
         F_thrust = vdot(F_thrust_ideal, b3);    // Project ideal thrust onto b3 vector [N]
-        // F_thrust = clamp(F_thrust,0.0f,F_thrust_max*0.7f);
         M = vadd(R_effort,Gyro_dyn);            // Control moments [Nm]
 
         // =========== THRUST AND MOMENTS [FORCE NOTATION] =========== // 
@@ -383,23 +390,17 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
         }
 
 
-
-
-
-
         // =========== CONVERT THRUSTS AND MOMENTS TO PWM =========== // 
         f_thrust = F_thrust/4.0f;
         f_roll = M.x/(4.0f*dp);
         f_pitch = M.y/(4.0f*dp);
         f_yaw = M.z/(4.0*c_tf);
 
-        f_thrust_pwm = thrust2PWM(f_thrust);
-        f_roll_pwm = thrust2PWM(f_roll);
-        f_pitch_pwm = thrust2PWM(f_pitch);
-        f_yaw_pwm = thrust2PWM(f_yaw);
-
-        f_thrust_pwm = clamp(f_thrust_pwm,0,(int)65535*0.85f);
-        // F_thrust = clamp(F_thrust,0.0f,F_thrust_max*0.7f);
+        f_thrust = clamp(f_thrust,0.0f,11.331f);    // Clamp thrust to prevent control saturation
+        // M1_pwm = limitPWM(thrust2PWM(f_thrust + f_roll - f_pitch + f_yaw)); // Add respective thrust components and limit to (0 <= PWM <= 60,000)
+        // M2_pwm = limitPWM(thrust2PWM(f_thrust + f_roll + f_pitch - f_yaw));
+        // M3_pwm = limitPWM(thrust2PWM(f_thrust - f_roll + f_pitch + f_yaw));
+        // M4_pwm = limitPWM(thrust2PWM(f_thrust - f_roll - f_pitch - f_yaw));
 
 
 
@@ -411,39 +412,37 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
             control->yaw = 0;
         }
         else{
-            control->thrust = f_thrust_pwm;
-            control->roll = f_roll_pwm/2;
-            control->pitch = f_pitch_pwm/2;
-            control->yaw = f_yaw_pwm/2;
+            control->thrust = f_thrust; // Need this value in PWM for onboard Extended Kalman Filter
+            control->roll = (int16_t)(f_roll*1e6f); // Convert N into integer just for variable transfer
+            control->pitch = (int16_t)(f_pitch*1e6f);
+            control->yaw = (int16_t)(f_yaw*1e6f);
         }
 
         
+        
 
-        M1_pwm = limitPWM(f_thrust_pwm + f_roll_pwm - f_pitch_pwm + f_yaw_pwm); // Add respective thrust components and limit to (0 <= PWM <= 60,000)
-        M2_pwm = limitPWM(f_thrust_pwm + f_roll_pwm + f_pitch_pwm - f_yaw_pwm);
-        M3_pwm = limitPWM(f_thrust_pwm - f_roll_pwm + f_pitch_pwm + f_yaw_pwm);
-        M4_pwm = limitPWM(f_thrust_pwm - f_roll_pwm - f_pitch_pwm - f_yaw_pwm);
+        // if (tick%100 ==  0)
+        // {
+            
+        //     // printvec(F_thrust_ideal);
+        //     // DEBUG_PRINT("F_thrust: %.2f | M.x: %.2f | M.y: %.2f | M.z: %.2f\n",F_thrust,M.x*1e3,M.y*1e3,M.z*1e3);
+        //     // DEBUG_PRINT("f_thrust: %.2f | f_roll: %.2f | f_pitch: %.2f | f_yaw: %.2f\n",f_thrust,f_roll,f_pitch,f_yaw);
+        //     DEBUG_PRINT("M1_pwm: %d | M2_pwm: %d | M3_pwm: %d | M4_pwm: %d\n",M1_pwm,M2_pwm,M3_pwm,M4_pwm);
+        //     // DEBUG_PRINT("M1: %.1f | M2: %.1f | M3: %.1f | M4: %.1f\n",control->thrust,(float)control->roll,(float)control->pitch,(float)control->yaw);
 
-        // Convert PWM to motor speeds
-        MS1 = sqrtf(PWM2thrust(M1_pwm)/kf);
-        MS2 = sqrtf(PWM2thrust(M2_pwm)/kf);
-        MS3 = sqrtf(PWM2thrust(M3_pwm)/kf);
-        MS4 = sqrtf(PWM2thrust(M4_pwm)/kf);
+        // }
+
+        // // Convert PWM to motor speeds
+        // MS1 = sqrtf(PWM2thrust(M1_pwm)/kf);
+        // MS2 = sqrtf(PWM2thrust(M2_pwm)/kf);
+        // MS3 = sqrtf(PWM2thrust(M3_pwm)/kf);
+        // MS4 = sqrtf(PWM2thrust(M4_pwm)/kf);
 
         
         compressGTCSetpoint();
         compressMiscStates();
 
-        if (tick%100 ==  0)
-        {
-            DEBUG_PRINT("e_PI.z: %.2f\n",e_PI.z);
-            // printvec(F_thrust_ideal);
-            // DEBUG_PRINT("F_thrust: %.2f | M.x: %.2f | M.y: %.2f | M.z: %.2f\n",F_thrust,M.x,M.y,M.z);
-            // DEBUG_PRINT("f_thrust: %.2f | f_roll: %.2f | f_pitch: %.2f | f_yaw: %.2f\n",f_thrust,f_roll,f_pitch,f_yaw);
-            // DEBUG_PRINT("f_thrust_pwm: %d | f_roll_pwm: %d | f_pitch_pwm: %d | f_yaw_pwm: %d\n",f_thrust_pwm,f_roll_pwm,f_pitch_pwm,f_yaw_pwm);
-
-
-        }
+        
 
     }
 
@@ -518,12 +517,6 @@ LOG_GROUP_STOP(setpointZ_GTC)
 LOG_GROUP_START(miscStatesZ_GTC)
 LOG_ADD(LOG_UINT32, OF_xy, &miscStatesZ_GTC.OF_xy)
 LOG_ADD(LOG_INT16,  RREV, &miscStatesZ_GTC.RREV)
-
-LOG_ADD(LOG_UINT32, M_xy, &miscStatesZ_GTC.Mxy)
-LOG_ADD(LOG_UINT32, FM_z, &miscStatesZ_GTC.FMz)
-
-LOG_ADD(LOG_UINT32, MS12, &miscStatesZ_GTC.MS12)
-LOG_ADD(LOG_UINT32, MS34, &miscStatesZ_GTC.MS34)
 
 LOG_ADD(LOG_UINT8, Flip_Flag, &flip_flag)
 LOG_GROUP_STOP(miscStatesZ_GTC)

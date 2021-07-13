@@ -35,6 +35,7 @@
 #include "motors.h"
 #include "debug.h"
 #include "controller.h"
+#include "controller_gtc.h"
 
 static bool motorSetEnable = false;
 static bool safeModeEnable = true;
@@ -92,29 +93,57 @@ void powerStop()
   motorsSetRatio(MOTOR_M4, 0);
 }
 
-void powerDistribution(const control_t *control)
+void powerDistribution(control_t *control,const uint32_t tick)
 {
   
 
   if (getControllerType() == ControllerTypeGTC)
   {
-    // Note: control struct has int16_t datatype with PWM limit of 32,767 for roll, pitch, and yaw. 
-    // So values are compressed in half in GTC and re-expanded here to preserve values greater than 32,767
-    int32_t r = (control->roll)*2; 
-    int32_t p = (control->pitch)*2;
-    int32_t y = (control->yaw)*2;
+    
+    float f_thrust_g = control->thrust*Newton2g;
+    float f_roll_g = (float)(control->roll)*1e-6f*Newton2g;
+    float f_pitch_g = (float)(control->pitch)*1e-6f*Newton2g;
+    float f_yaw_g = (float)(control->yaw)*1e-6f*Newton2g;
+
+    f_thrust_g = clamp(f_thrust_g,0.0f,f_MAX*0.7);    // Clamp thrust to prevent control saturation
+    control->thrust = f_thrust_g*g2Newton;
+
+
+    M1_pwm = limitPWM(thrust2PWM(f_thrust_g + f_roll_g - f_pitch_g + f_yaw_g)); // Add respective thrust components and limit to (0 <= PWM <= 60,000)
+    M2_pwm = limitPWM(thrust2PWM(f_thrust_g + f_roll_g + f_pitch_g - f_yaw_g));
+    M3_pwm = limitPWM(thrust2PWM(f_thrust_g - f_roll_g + f_pitch_g + f_yaw_g));
+    M4_pwm = limitPWM(thrust2PWM(f_thrust_g - f_roll_g - f_pitch_g - f_yaw_g));
+
+    // if (tick%100 ==  0)
+    //     {
+            
+    //         // printvec(F_thrust_ideal);
+    //         // DEBUG_PRINT("F_thrust: %.2f | M.x: %.2f | M.y: %.2f | M.z: %.2f\n",F_thrust,M.x*1e3,M.y*1e3,M.z*1e3);
+    //         // DEBUG_PRINT("f_thrust: %.2f | f_roll: %.2f | f_pitch: %.2f | f_yaw: %.2f\n",f_thrust,f_roll,f_pitch,f_yaw);
+    //         DEBUG_PRINT("M1_pwm: %d | M2_pwm: %d | M3_pwm: %d | M4_pwm: %d\n",M1_pwm,M2_pwm,M3_pwm,M4_pwm);
+    //         // DEBUG_PRINT("M1: %.1f | M2: %.1f | M3: %.1f | M4: %.1f\n",control->thrust,(float)control->roll,(float)control->pitch,(float)control->yaw);
+
+    //     }
+
 
     // THRUSTS IN CUSTOM CONFIGURATION
-    motorPower_GTC.m1 = limitPWM(control->thrust + r - p + y); // Add respective thrust components and limit to (0 <= PWM <= 65,535)
-    motorPower_GTC.m2 = limitPWM(control->thrust + r + p - y);
-    motorPower_GTC.m3 = limitPWM(control->thrust - r + p + y);
-    motorPower_GTC.m4 = limitPWM(control->thrust - r - p - y);
+    motorPower_GTC.m1 = M1_pwm; // Add respective thrust components and limit to (0 <= PWM <= 60,000)
+    motorPower_GTC.m2 = M2_pwm;
+    motorPower_GTC.m3 = M3_pwm;
+    motorPower_GTC.m4 = M4_pwm;
    
-    // MAP THRUSTS TO CRAZYFLIE CONFIGURATION
+    // MAP THRUSTS TO CRAZYFLIE PHYSICAL CONFIGURATION
     motorPower.m1 = motorPower_GTC.m4;
     motorPower.m2 = motorPower_GTC.m3;
     motorPower.m3 = motorPower_GTC.m2;
     motorPower.m4 = motorPower_GTC.m1;
+
+
+    miscStatesZ_GTC.FMz = compressXY(f_thrust_g/f_MAX,f_yaw_g/f_MAX);
+    miscStatesZ_GTC.Mxy = compressXY(f_roll_g/f_MAX,f_pitch_g/f_MAX); // [%]
+
+    miscStatesZ_GTC.MS12 = compressXY(M1_pwm*0.5e-3f,M2_pwm*0.5e-3);     // [rad/s*0.01]
+    miscStatesZ_GTC.MS34 = compressXY(M3_pwm*0.5e-3f,M4_pwm*0.5e-3);
     
   }
   else
@@ -167,13 +196,6 @@ void powerDistribution(const control_t *control)
       motorsSetRatio(MOTOR_M3, motorPower.m3);
       motorsSetRatio(MOTOR_M4, motorPower.m4);
     }
-
-    // Convert PWM to motor speeds (Forster: Eq. 3.4b)
-    MS1 = 0.04077f*motorPower.m1 + 380.836f; // These aren't true anymore w/ new motors
-    MS2 = 0.04077f*motorPower.m2 + 380.836f;
-    MS3 = 0.04077f*motorPower.m3 + 380.836f;
-    MS4 = 0.04077f*motorPower.m4 + 380.836f;
-
     
   }
 }
@@ -201,3 +223,12 @@ LOG_ADD(LOG_FLOAT, MS2, &MS2)
 LOG_ADD(LOG_FLOAT, MS3, &MS3)
 LOG_ADD(LOG_FLOAT, MS4, &MS4)
 LOG_GROUP_STOP(motor)
+
+LOG_GROUP_START(miscStatesZ_GTC)
+
+LOG_ADD(LOG_UINT32, M_xy, &miscStatesZ_GTC.Mxy)
+LOG_ADD(LOG_UINT32, FM_z, &miscStatesZ_GTC.FMz)
+
+LOG_ADD(LOG_UINT32, MS12, &miscStatesZ_GTC.MS12)
+LOG_ADD(LOG_UINT32, MS34, &miscStatesZ_GTC.MS34)
+LOG_GROUP_STOP(miscStatesZ_GTC)

@@ -26,6 +26,10 @@
 #include "stabilizer_types.h"
 #include "physicalConstants.h"
 
+#define PWM_MAX 60000
+#define f_MAX (16.5)
+#define g2Newton (9.81f/1000.0f)
+#define Newton2g (1000.0f/9.81f)
 
 // FUNCTION PRIMITIVES
 void controllerGTCInit(void);
@@ -78,7 +82,7 @@ static struct mat33 R; // Orientation as rotation matrix
 static struct vec stateEul = {0.0f,0.0f,0.0f}; // Pose in Euler Angles [YZX Notation]
 
 // DESIRED STATES
-static struct vec x_d = {0.0f,0.0f,0.2f}; // Pos-desired [m]
+static struct vec x_d = {0.0f,0.0f,0.0f}; // Pos-desired [m]
 static struct vec v_d = {0.0f,0.0f,0.0f}; // Vel-desired [m/s]
 static struct vec a_d = {0.0f,0.0f,0.0f}; // Acc-desired [m/s^2]
 
@@ -223,17 +227,19 @@ static struct {
 
 
 // EXPLICIT FUNTIONS
+
+// Converts thrust in grams to their respective PWM values
 static inline int32_t thrust2PWM(float f) 
 {
     // Conversion values calculated from self motor analysis
     float a = 2.98e-4;
     float b = -9.84e-1;
 
-    float s = 1; // sign of value
+    float s = 1.0f; // sign of value
     int32_t f_pwm = 0;
 
     s = f/fabsf(f);
-    f = fabsf(f)*1000.0f/9.81f; // Convert thrust to grams
+    f = fabsf(f);
     
     f_pwm = s*(f-b)/a;
 
@@ -241,7 +247,9 @@ static inline int32_t thrust2PWM(float f)
 
 }        
 
-static inline float PWM2thrust(int32_t M_PWM) // Converts thrust in PWM to thrust in Newtons
+
+// Converts thrust in PWM to their respective gram values
+static inline float PWM2thrust(int32_t M_PWM) 
 {
     // Conversion values from new motors
     float a = 2.98e-4;
@@ -249,7 +257,7 @@ static inline float PWM2thrust(int32_t M_PWM) // Converts thrust in PWM to thrus
 
     float f = (a*M_PWM + b); // Convert thrust to grams
 
-    f = f*9.81/1000; // Convert thrust from grams to Newtons
+    
 
     return f;
 }
@@ -273,11 +281,7 @@ static void compressMiscStates(){
     miscStatesZ_GTC.OF_xy = compressXY(OF_x,OF_y);              // [milli-rad/s]
     miscStatesZ_GTC.RREV = RREV * 1000.0f;                      // [milli-rad/s]
 
-    miscStatesZ_GTC.Mxy = compressXY((float)f_roll_pwm/65535.0f,(float)f_pitch_pwm/65535.0f);  // [mN | N*um]
-    miscStatesZ_GTC.FMz = compressXY((float)f_thrust_pwm/65535.0f,(float)f_yaw_pwm/65535.0f);
-
-    miscStatesZ_GTC.MS12 = compressXY(MS1*0.01f,MS2*0.01f);     // [rad/s*0.01]
-    miscStatesZ_GTC.MS34 = compressXY(MS3*0.01f,MS4*0.01f);
+        
 
 }
 

@@ -179,8 +179,8 @@ static StaticSemaphore_t dataMutexBuffer;
  * Constants used in the estimator
  */
 
-//thrust is thrust mapped for 65536 <==> 60 GRAMS!
-#define CONTROL_TO_ACC (GRAVITY_MAGNITUDE*60.0f/(CF_MASS*1000.0f)/65536.0f)
+//thrust is thrust mapped for 60000 <==> 64 GRAMS!
+#define CONTROL_TO_ACC (GRAVITY_MAGNITUDE*64.0f/(CF_MASS*1000.0f)/60000.0f)
 
 
 /**

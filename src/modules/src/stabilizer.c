@@ -146,8 +146,9 @@ static void calcSensorToOutputLatency(const sensorData_t *sensorData)
   inToOutLatency = outTimestamp - sensorData->interruptTimestamp;
 }
 
+// Compresses values in range (-32.767 - 32.767)
 uint32_t compressXY(float x, float y)
-{ // Compresses values in range (-32.767 - 32.767)
+{ 
   
   uint16_t xnew, ynew;
   uint32_t xy;
@@ -331,7 +332,7 @@ static void stabilizerTask(void* param)
         powerStop();
       } 
       else {
-        powerDistribution(&control);
+        powerDistribution(&control,tick);
       }
 
       // Log data to uSD card if configured

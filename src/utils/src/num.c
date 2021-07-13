@@ -99,7 +99,9 @@ uint16_t limitUint16(int32_t value)
 
   return (uint16_t)value;
 }
-uint16_t limitPWM(int32_t value) // Limit PWM value to accurate motor curve limit (60,000)
+
+// Limit PWM value to accurate motor curve limit (60,000)
+uint16_t limitPWM(int32_t value) 
 {
   if(value > 60000)
   {

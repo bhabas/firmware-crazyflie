@@ -125,7 +125,6 @@ void powerDistribution(control_t *control,const uint32_t tick)
 
     // }
 
-    control->thrust = f_thrust_g*g2Newton;
 
     // THRUSTS IN CUSTOM CONFIGURATION
     motorPower_GTC.m1 = M1_pwm; // Add respective thrust components and limit to (0 <= PWM <= 60,000)

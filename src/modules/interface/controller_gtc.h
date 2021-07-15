@@ -7,8 +7,7 @@
 #ifndef __CONTROLLER_GTC_H__
 #define __CONTROLLER_GTC_H__
 
-#include "stabilizer_types.h"
-#include "physicalConstants.h"
+
 
 // STANDARD LIBRARIES
 #include <math.h>
@@ -25,6 +24,8 @@
 #include "stabilizer.h"
 #include "stabilizer_types.h"
 #include "physicalConstants.h"
+#include "stabilizer_types.h"
+#include "quatcompress.h"
 
 #define PWM_MAX 60000
 #define f_MAX (16.5)
@@ -164,6 +165,21 @@ static float OF_y = 0.0f; // [rad/s]
 static bool flip_flag = false;
 
 
+
+
+
+// STATE VALUES AT FLIP TRIGGER
+static float RREV_tr = 0.0f;
+static float OF_x_tr = 0.0f;
+static float OF_y_tr = 0.0f;
+
+static struct vec statePos_tr = {0.0f,0.0f,0.0f};         // Pos [m]
+static struct vec stateVel_tr = {0.0f,0.0f,0.0f};         // Vel [m/s]
+static struct quat stateQuat_tr = {0.0f,0.0f,0.0f,1.0f};  // Orientation
+static struct vec stateOmega_tr = {0.0f,0.0f,0.0f};       // Angular Rate [rad/s]
+
+
+
 // POLICY VARIABLES
 static float RREV_thr = 0.0f;
 static float G1 = 0.0f;
@@ -191,7 +207,6 @@ static float t = 0.0f;
 static float T = 0.0f;
 static uint8_t traj_type = 0;
 static bool execute_traj = false;
-
 
 
 static struct {
@@ -222,6 +237,29 @@ static struct {
 
 } setpointZ_GTC;
 
+
+static struct {
+
+    // Compressed positions [mm]
+    uint32_t xy; 
+    int16_t z;
+
+    // Compressed velocities [mm/s]
+    uint32_t vxy; 
+    int16_t vz;
+
+    // compressed quaternion, see quatcompress.h
+    int32_t quat; 
+
+    // Compressed angular velocity [milli-rad/sec]
+    uint32_t wxy; 
+    int16_t wz;
+
+    // Compressed Optical Flow Values
+    uint32_t OF_xy; // [milli-rad/s]
+    int16_t RREV;   // [milli-rad/s]
+
+} FlipStatesZ_GTC;
 
 
 
@@ -277,11 +315,31 @@ static void compressGTCSetpoint(){
 
 static void compressMiscStates(){
 
-    
     miscStatesZ_GTC.OF_xy = compressXY(OF_x,OF_y);              // [milli-rad/s]
     miscStatesZ_GTC.RREV = RREV * 1000.0f;                      // [milli-rad/s]
 
-        
+}
+
+static void compressFlipStates(){
+    FlipStatesZ_GTC.xy = compressXY(statePos_tr.x,statePos_tr.y);
+    FlipStatesZ_GTC.z = statePos_tr.z * 1000.0f;
+
+    FlipStatesZ_GTC.vxy = compressXY(stateVel_tr.x, stateVel_tr.y);
+    FlipStatesZ_GTC.vz = stateVel_tr.z * 1000.0f;
+
+    FlipStatesZ_GTC.wxy = compressXY(stateOmega_tr.x,stateOmega_tr.y);
+    FlipStatesZ_GTC.wz = stateOmega_tr.z * 1000.0f;
+
+
+    float const q[4] = {
+        stateQuat_tr.x,
+        stateQuat_tr.y,
+        stateQuat_tr.z,
+        stateQuat_tr.w};
+    FlipStatesZ_GTC.quat = quatcompress(q);
+
+   FlipStatesZ_GTC.OF_xy = compressXY(OF_x,OF_y);
+   FlipStatesZ_GTC.RREV = RREV * 1000.0f; 
 
 }
 

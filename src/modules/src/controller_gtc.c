@@ -361,6 +361,17 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
 
                     flip_flag = true;
 
+                    // UPDATE, RECORD, AND COMPRESS STATE VALUES AT FLIP TRIGGER
+                    statePos_tr = statePos;
+                    stateVel_tr = stateVel;
+                    stateQuat_tr = stateQuat;
+                    stateOmega_tr = stateOmega;
+
+                    OF_y_tr = OF_y;
+                    OF_x_tr = OF_x;
+                    RREV_tr = RREV;
+
+                    compressFlipStates();
                 }
 
                 if(flip_flag == true){
@@ -512,6 +523,25 @@ LOG_ADD(LOG_INT16,  RREV, &miscStatesZ_GTC.RREV)
 
 LOG_ADD(LOG_UINT8, Flip_Flag, &flip_flag)
 LOG_GROUP_STOP(miscStatesZ_GTC)
+
+
+
+LOG_GROUP_START(FlipStatesZ_GTC)
+LOG_ADD(LOG_UINT32, xy, &FlipStatesZ_GTC.xy)
+LOG_ADD(LOG_INT16,  z, &FlipStatesZ_GTC.z)
+
+LOG_ADD(LOG_UINT32, vxy, &FlipStatesZ_GTC.vxy)
+LOG_ADD(LOG_INT16,  vz, &FlipStatesZ_GTC.vz)
+
+LOG_ADD(LOG_UINT32, quat, &FlipStatesZ_GTC.quat)           
+
+LOG_ADD(LOG_UINT32, wxy, &FlipStatesZ_GTC.wxy)
+LOG_ADD(LOG_INT16,  wz, &FlipStatesZ_GTC.wz)
+
+LOG_ADD(LOG_UINT32, OF_xy, &FlipStatesZ_GTC.OF_xy)
+LOG_ADD(LOG_INT16,  RREV, &FlipStatesZ_GTC.RREV)
+
+LOG_GROUP_STOP(FlipStatesZ_GTC)
 
 
 LOG_GROUP_START(F_M)

@@ -100,13 +100,13 @@ void powerDistribution(control_t *control,const uint32_t tick)
   if (getControllerType() == ControllerTypeGTC)
   {
     
-    float f_thrust_g = control->thrust*Newton2g;
-    float f_roll_g = (float)(control->roll)*1e-6f*Newton2g;
-    float f_pitch_g = (float)(control->pitch)*1e-6f*Newton2g;
-    float f_yaw_g = (float)(control->yaw)*1e-6f*Newton2g;
+    float f_thrust_g = control->thrust;
+    float f_roll_g = (float)(control->roll)*1e-3f;
+    float f_pitch_g = (float)(control->pitch)*1e-3f;
+    float f_yaw_g = (float)(control->yaw)*1e-3f;
 
     f_thrust_g = clamp(f_thrust_g,0.0f,f_MAX*0.8);    // Clamp thrust to prevent control saturation
-    control->thrust = f_thrust_g*g2Newton;
+    
 
 
     M1_pwm = limitPWM(thrust2PWM(f_thrust_g + f_roll_g - f_pitch_g + f_yaw_g)); // Add respective thrust components and limit to (0 <= PWM <= 60,000)
@@ -114,17 +114,18 @@ void powerDistribution(control_t *control,const uint32_t tick)
     M3_pwm = limitPWM(thrust2PWM(f_thrust_g - f_roll_g + f_pitch_g + f_yaw_g));
     M4_pwm = limitPWM(thrust2PWM(f_thrust_g - f_roll_g - f_pitch_g - f_yaw_g));
 
-    // if (tick%100 ==  0)
-    //     {
-            
-    //         // printvec(F_thrust_ideal);
-    //         // DEBUG_PRINT("F_thrust: %.2f | M.x: %.2f | M.y: %.2f | M.z: %.2f\n",F_thrust,M.x*1e3,M.y*1e3,M.z*1e3);
-    //         // DEBUG_PRINT("f_thrust: %.2f | f_roll: %.2f | f_pitch: %.2f | f_yaw: %.2f\n",f_thrust,f_roll,f_pitch,f_yaw);
-    //         DEBUG_PRINT("M1_pwm: %d | M2_pwm: %d | M3_pwm: %d | M4_pwm: %d\n",M1_pwm,M2_pwm,M3_pwm,M4_pwm);
-    //         // DEBUG_PRINT("M1: %.1f | M2: %.1f | M3: %.1f | M4: %.1f\n",control->thrust,(float)control->roll,(float)control->pitch,(float)control->yaw);
+    // if (tick%300 ==  0)
+    // {
+        
+    //     // printvec(F_thrust_ideal);
+    //     // DEBUG_PRINT("F_thrust: %.2f | M.x: %.2f | M.y: %.2f | M.z: %.2f\n",F_thrust,M.x*1e3f,M.y*1e3f,M.z*1e3f);
+    //     DEBUG_PRINT("c->thrust: %.3f | c->roll: %d | c->pitch: %d | c->yaw: %d\n",control->thrust,control->roll,control->pitch,control->yaw);
+    //     DEBUG_PRINT("f_thrust_g: %.3f | f_roll_g: %.3f | f_pitch_g: %.3f | f_yaw_g: %.3f\n",f_thrust_g,f_roll_g,f_pitch_g,f_yaw_g);
+    //     DEBUG_PRINT("M1_pwm: %d | M2_pwm: %d | M3_pwm: %d | M4_pwm: %d\n",M1_pwm,M2_pwm,M3_pwm,M4_pwm);
 
-    //     }
+    // }
 
+    control->thrust = f_thrust_g*g2Newton;
 
     // THRUSTS IN CUSTOM CONFIGURATION
     motorPower_GTC.m1 = M1_pwm; // Add respective thrust components and limit to (0 <= PWM <= 60,000)
@@ -139,8 +140,8 @@ void powerDistribution(control_t *control,const uint32_t tick)
     motorPower.m4 = motorPower_GTC.m1;
 
 
-    miscStatesZ_GTC.FMz = compressXY(f_thrust_g/f_MAX,f_yaw_g/f_MAX);
-    miscStatesZ_GTC.Mxy = compressXY(f_roll_g/f_MAX,f_pitch_g/f_MAX); // [%]
+    miscStatesZ_GTC.FMz = compressXY(f_thrust_g,f_yaw_g);
+    miscStatesZ_GTC.Mxy = compressXY(f_roll_g,f_pitch_g); // [%]
 
     miscStatesZ_GTC.MS12 = compressXY(M1_pwm*0.5e-3f,M2_pwm*0.5e-3);     // [rad/s*0.01]
     miscStatesZ_GTC.MS34 = compressXY(M3_pwm*0.5e-3f,M4_pwm*0.5e-3);

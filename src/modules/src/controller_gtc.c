@@ -373,6 +373,15 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
 
                 }
             }
+            else if(Moment_flag == true){
+                M.x = M_d.x;
+                M.y = M_d.y;
+                M.z = M_d.z;
+
+                M = vscl(2.0f,M_d); // Need to double moment to ensure it survives the PWM<0 cutoff
+                F_thrust = 0.0f;
+
+            }
             else{
                 F_thrust = F_thrust;
                 M = M;
@@ -388,17 +397,10 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
 
 
         // =========== CONVERT THRUSTS AND MOMENTS TO PWM =========== // 
-        f_thrust = F_thrust/4.0f;
-        f_roll = M.x/(4.0f*dp);
-        f_pitch = M.y/(4.0f*dp);
-        f_yaw = M.z/(4.0*c_tf);
-
-        f_thrust = clamp(f_thrust,0.0f,11.331f);    // Clamp thrust to prevent control saturation
-        // M1_pwm = limitPWM(thrust2PWM(f_thrust + f_roll - f_pitch + f_yaw)); // Add respective thrust components and limit to (0 <= PWM <= 60,000)
-        // M2_pwm = limitPWM(thrust2PWM(f_thrust + f_roll + f_pitch - f_yaw));
-        // M3_pwm = limitPWM(thrust2PWM(f_thrust - f_roll + f_pitch + f_yaw));
-        // M4_pwm = limitPWM(thrust2PWM(f_thrust - f_roll - f_pitch - f_yaw));
-
+        f_thrust = F_thrust/4.0f*Newton2g;
+        f_roll = M.x/(4.0f*dp)*Newton2g;
+        f_pitch = M.y/(4.0f*dp)*Newton2g;
+        f_yaw = M.z/(4.0*c_tf)*Newton2g;
 
 
         // =========== INSERT PWM VALUES INTO CONTROL STRUCT =========== //
@@ -409,23 +411,23 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
             control->yaw = 0;
         }
         else{
-            control->thrust = f_thrust; // Need this value in PWM for onboard Extended Kalman Filter
-            control->roll = (int16_t)(f_roll*1e6f); // Convert N into integer just for variable transfer
-            control->pitch = (int16_t)(f_pitch*1e6f);
-            control->yaw = (int16_t)(f_yaw*1e6f);
+            control->thrust = f_thrust;             // Need this value in PWM for onboard Extended Kalman Filter (Maybe? IDK...)
+            control->roll = (int16_t)(f_roll*1e3f); // Convert Newtons into integer just for variable transfer
+            control->pitch = (int16_t)(f_pitch*1e3f);
+            control->yaw = (int16_t)(f_yaw*1e3f); 
         }
 
         
         
 
-        // if (tick%100 ==  0)
+        // if (tick%200 ==  0)
         // {
             
         //     // printvec(F_thrust_ideal);
-        //     // DEBUG_PRINT("F_thrust: %.2f | M.x: %.2f | M.y: %.2f | M.z: %.2f\n",F_thrust,M.x*1e3,M.y*1e3,M.z*1e3);
-        //     // DEBUG_PRINT("f_thrust: %.2f | f_roll: %.2f | f_pitch: %.2f | f_yaw: %.2f\n",f_thrust,f_roll,f_pitch,f_yaw);
-        //     DEBUG_PRINT("M1_pwm: %d | M2_pwm: %d | M3_pwm: %d | M4_pwm: %d\n",M1_pwm,M2_pwm,M3_pwm,M4_pwm);
-        //     // DEBUG_PRINT("M1: %.1f | M2: %.1f | M3: %.1f | M4: %.1f\n",control->thrust,(float)control->roll,(float)control->pitch,(float)control->yaw);
+        //     DEBUG_PRINT("F_thrust: %.2f | M.x: %.2f | M.y: %.2f | M.z: %.2f\n",F_thrust,M.x*1e3f,M.y*1e3f,M.z*1e3f);
+        //     DEBUG_PRINT("f_thrust: %.3f | f_roll: %.3f | f_pitch: %.3f | f_yaw: %.3f\n",f_thrust,f_roll,f_pitch,f_yaw);
+        //     // DEBUG_PRINT("M1_pwm: %d | M2_pwm: %d | M3_pwm: %d | M4_pwm: %d\n",M1_pwm,M2_pwm,M3_pwm,M4_pwm);
+        //     DEBUG_PRINT("thrust: %.1f | roll: %d | pitch: %d | yaw: %d\n",control->thrust,control->roll,control->pitch,control->yaw);
 
         // }
         

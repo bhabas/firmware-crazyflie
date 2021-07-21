@@ -377,10 +377,10 @@ static void compressFlipStates(){
 
 static void compressEstStates(){
     StateEstZ_GTC.xy = compressXY(statePos.x,statePos.y);
-    StateEstZ_GTC.z = statePos_tr.z * 1000.0f;
+    StateEstZ_GTC.z = statePos.z * 1000.0f;
 
     StateEstZ_GTC.vxy = compressXY(stateVel.x, stateVel.y);
-    StateEstZ_GTC.vz = stateVel_tr.z * 1000.0f;
+    StateEstZ_GTC.vz = stateVel.z * 1000.0f;
 
     StateEstZ_GTC.wxy = compressXY(stateOmega.x,stateOmega.y);
     StateEstZ_GTC.wz = stateOmega.z * 1000.0f;

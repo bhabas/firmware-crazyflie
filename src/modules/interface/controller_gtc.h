@@ -261,6 +261,28 @@ static struct {
 
 } FlipStatesZ_GTC;
 
+static struct {
+    // Compressed positions [mm]
+    uint32_t xy; 
+    int16_t z;
+
+    // Compressed velocities [mm/s]
+    uint32_t vxy; 
+    int16_t vz;
+
+    // compressed quaternion, see quatcompress.h
+    int32_t quat; 
+
+    // Compressed angular velocity [milli-rad/sec]
+    uint32_t wxy; 
+    int16_t wz;
+
+    // Compressed Optical Flow Values
+    uint32_t OF_xy; // [milli-rad/s]
+    int16_t RREV;   // [milli-rad/s]
+
+} StateEstZ_GTC;
+
 
 
 
@@ -353,7 +375,28 @@ static void compressFlipStates(){
 
 }
 
+static void compressEstStates(){
+    StateEstZ_GTC.xy = compressXY(statePos.x,statePos.y);
+    StateEstZ_GTC.z = statePos_tr.z * 1000.0f;
 
+    StateEstZ_GTC.vxy = compressXY(stateVel.x, stateVel.y);
+    StateEstZ_GTC.vz = stateVel_tr.z * 1000.0f;
+
+    StateEstZ_GTC.wxy = compressXY(stateOmega.x,stateOmega.y);
+    StateEstZ_GTC.wz = stateOmega.z * 1000.0f;
+
+
+    float const q[4] = {
+        stateQuat.x,
+        stateQuat.y,
+        stateQuat.z,
+        stateQuat.w};
+    StateEstZ_GTC.quat = quatcompress(q);
+
+   StateEstZ_GTC.OF_xy = compressXY(OF_x,OF_y);
+   StateEstZ_GTC.RREV = RREV * 1000.0f; 
+
+}
 
 
 

@@ -42,7 +42,7 @@ void controllerGTCReset(void)
     e_PI = vzero();
     e_RI = vzero();
 
-    x_d = mkvec(0.0f,0.0f,0.2f);
+    x_d = mkvec(0.0f,0.0f,0.0f);
     v_d = mkvec(0.0f,0.0f,0.0f);
     a_d = mkvec(0.0f,0.0f,0.0f);
     
@@ -442,6 +442,7 @@ void controllerGTC(control_t *control, setpoint_t *setpoint,
 
         // }
         
+        compressEstStates();
         compressGTCSetpoint();
         compressMiscStates();
 
@@ -505,6 +506,23 @@ LOG_ADD(LOG_FLOAT, Omega_X, &stateOmega.x)
 LOG_ADD(LOG_FLOAT, Omega_Y, &stateOmega.y)
 LOG_ADD(LOG_FLOAT, Omega_Z, &stateOmega.z)
 LOG_GROUP_STOP(GTC_State_Est)
+
+LOG_GROUP_START(StateEstZ_GTC)
+LOG_ADD(LOG_UINT32, xy, &StateEstZ_GTC.xy)
+LOG_ADD(LOG_INT16,  z, &StateEstZ_GTC.z)
+
+LOG_ADD(LOG_UINT32, vxy, &StateEstZ_GTC.vxy)
+LOG_ADD(LOG_INT16,  vz, &StateEstZ_GTC.vz)
+
+LOG_ADD(LOG_UINT32, quat, &StateEstZ_GTC.quat)           
+
+LOG_ADD(LOG_UINT32, wxy, &StateEstZ_GTC.wxy)
+LOG_ADD(LOG_INT16,  wz, &StateEstZ_GTC.wz)
+
+LOG_ADD(LOG_UINT32, OF_xy, &StateEstZ_GTC.OF_xy)
+LOG_ADD(LOG_INT16,  RREV, &StateEstZ_GTC.RREV)
+LOG_GROUP_STOP(StateEstZ_GTC)
+
 
 LOG_GROUP_START(setpointZ_GTC)
 LOG_ADD(LOG_UINT32, xy, &setpointZ_GTC.xy)
